@@ -1,4 +1,4 @@
-"""Stock Alerts v7.4 - DEMO DAY FINAL (With Market Data & Delta)"""
+"""Stock Alerts v7.5 - DEMO DAY FINAL (Auto-Headers & Crash Proof)"""
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -54,7 +54,6 @@ st.markdown(f"""
         width: 35px; height: 35px; border-radius: 50%; object-fit: contain;
         background-color: #fff; padding: 2px; border: 1px solid #ccc;
     }}
-    /* Metric container styling */
     div[data-testid="metric-container"] {{
         background-color: {BG_CARD};
         border: 1px solid {BORDER};
@@ -83,7 +82,29 @@ def get_db():
         st.error("⚠️ Connection Failed. Check Secrets.")
         return None
     try:
-        return client.open("StockWatcherDB")
+        # פתיחת הגיליון
+        sheet = client.open("StockWatcherDB")
+        
+        # --- בדיקת תקינות כותרות (Self-Healing) ---
+        # מוודא שטאב users קיים ויש לו כותרות
+        try:
+            ws_users = sheet.worksheet("users")
+            if not ws_users.row_values(1):
+                ws_users.append_row(["email", "password", "created_at"])
+        except:
+            ws_users = sheet.add_worksheet("users", 1000, 3)
+            ws_users.append_row(["email", "password", "created_at"])
+
+        # מוודא שטאב rules קיים ויש לו כותרות
+        try:
+            ws_rules = sheet.worksheet("rules")
+            if not ws_rules.row_values(1):
+                ws_rules.append_row(["user_email", "symbol", "min_price", "max_price", "min_vol", "last_alert"])
+        except:
+            ws_rules = sheet.add_worksheet("rules", 1000, 6)
+            ws_rules.append_row(["user_email", "symbol", "min_price", "max_price", "min_vol", "last_alert"])
+            
+        return sheet
     except:
         st.error("⚠️ Database 'StockWatcherDB' not found.")
         return None
@@ -96,7 +117,7 @@ def login_user(email, pw):
         records = sh.worksheet("users").get_all_records()
         hashed_pw = hashlib.sha256(pw.encode()).hexdigest()
         for user in records:
-            if str(user['email']).strip().lower() == email.strip().lower() and str(user['password']) == hashed_pw:
+            if str(user.get('email', '')).strip().lower() == email.strip().lower() and str(user.get('password', '')) == hashed_pw:
                 return user
         return None
     except: return None
@@ -119,7 +140,8 @@ def load_rules(email):
         sh = get_db()
         if not sh: return []
         records = sh.worksheet("rules").get_all_records()
-        return [r for r in records if str(r['user_email']).strip().lower() == email.strip().lower()]
+        # שימוש ב-get כדי למנוע קריסה אם המפתח חסר
+        return [r for r in records if str(r.get('user_email', '')).strip().lower() == email.strip().lower()]
     except: return []
 
 def add_rule(email, symbol, mn, mx, mv):
@@ -133,7 +155,7 @@ def delete_rule(email, symbol):
         sh = get_db()
         ws = sh.worksheet("rules")
         records = ws.get_all_records()
-        new_data = [r for r in records if not (r['user_email'] == email and r['symbol'] == symbol)]
+        new_data = [r for r in records if not (r.get('user_email') == email and r.get('symbol') == symbol)]
         ws.clear()
         if new_data:
             ws.update([list(records[0].keys())] + [list(r.values()) for r in new_data])
@@ -166,7 +188,7 @@ def send_email(to_email, symbol, price, vol, mn, mx):
         <p>Price: <b>${price}</b></p>
         <p>Volume: {vol:,}</p>
         <p>Range: ${mn} - ${mx}</p>
-        <a href="https://finance.yahoo.com/quote/{symbol}" style="background:{color}; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">View Chart</a></div>"""
+        <a href="https://finance.yahoo.com/quote/{symbol}">View Chart</a></div>"""
         
         msg = MIMEMultipart()
         msg['Subject'] = f"🔔 {symbol}: {title}"
@@ -188,7 +210,6 @@ def get_data(symbol):
         if not p: return None
         v = i.get('volume', 0)
         
-        # חישוב אחוז שינוי (חשוב לדשבורד!)
         change = 0.0
         if p and prev:
             change = ((p - prev) / prev) * 100
@@ -198,7 +219,27 @@ def get_data(symbol):
         return {'price': round(p,2), 'change': round(change, 2), 'volume': v, 'logo': logo}
     except: return None
 
-# --- Main App ---
+# ==========================================
+#              ADMIN PANEL
+# ==========================================
+def admin_panel():
+    st.markdown("## 🛡️ Admin Panel")
+    sh = get_db()
+    if sh:
+        try:
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown("### Users")
+                st.dataframe(pd.DataFrame(sh.worksheet("users").get_all_records()))
+            with col2:
+                st.markdown("### Alerts")
+                st.dataframe(pd.DataFrame(sh.worksheet("rules").get_all_records()))
+        except: st.error("Empty DB or Connection Error")
+
+# ==========================================
+#              MAIN APP FLOW
+# ==========================================
+
 if 'user' not in st.session_state: st.session_state.user = None
 
 if st.session_state.user is None:
@@ -227,18 +268,14 @@ if st.session_state.user is None:
 
 else:
     # Dashboard View
-    u_email = str(st.session_state.user['email'])
+    u_email = str(st.session_state.user.get('email', 'User'))
     
     # Admin Panel
     if u_email.strip().lower() == ADMIN_EMAIL.lower():
         with st.sidebar:
             st.divider()
             if st.checkbox("🛡️ Admin Panel"):
-                st.markdown("## Admin Database View")
-                sh = get_db()
-                if sh:
-                    st.write("Users:"); st.dataframe(pd.DataFrame(sh.worksheet("users").get_all_records()))
-                    st.write("Alerts:"); st.dataframe(pd.DataFrame(sh.worksheet("rules").get_all_records()))
+                admin_panel()
                 st.stop()
 
     # Top Bar
@@ -247,74 +284,63 @@ else:
     if c_btn.button(BTN_ICON): toggle_theme(); st.rerun()
     st.divider()
 
-    # Market Ticker (With Delta!)
-    st.markdown("##### 📊 Market Overview")
+    # Market Ticker
     m1, m2, m3 = st.columns(3)
-    
-    # פונקציית עזר להצגת מטריקה
     def show_metric(col, label, symbol):
         d = get_data(symbol)
-        if d:
-            col.metric(label, f"${d['price']:,}", f"{d['change']}%")
-        else:
-            col.metric(label, "Loading...", "0%")
+        if d: col.metric(label, f"${d['price']:,}", f"{d['change']}%")
+        else: col.metric(label, "Loading...", "0%")
 
     show_metric(m1, "S&P 500", "^GSPC")
     show_metric(m2, "NASDAQ", "^IXIC")
     show_metric(m3, "Bitcoin", "BTC-USD")
-    
     st.markdown("---")
 
     # Watchlist
-    st.markdown("##### 📜 Your Alerts")
     rules = load_rules(u_email)
-    
-    if not rules:
-        st.info("Your watchlist is empty. Add a stock below.")
+    if not rules: st.info("Your watchlist is empty. Add a stock below.")
 
     for r in rules:
-        d = get_data(r['symbol'])
+        d = get_data(r.get('symbol'))
         if d:
             st.markdown('<div class="custom-card" style="padding:1rem;">', unsafe_allow_html=True)
             cols = st.columns([0.5, 1, 1, 1, 1.5, 1, 0.5])
             
+            # Safe Get
+            sym = r.get('symbol', 'N/A')
+            mn = r.get('min_price', 0)
+            mx = r.get('max_price', 0)
+            mv = r.get('min_vol', 0)
+            
             cols[0].markdown(f'<img src="{d["logo"]}" class="stock-logo">', unsafe_allow_html=True)
-            cols[1].markdown(f"**{r['symbol']}**")
+            cols[1].markdown(f"**{sym}**")
             cols[2].write(f"${d['price']}")
             cols[3].caption(f"{(d['volume']/1000000):.1f}M")
-            cols[4].write(f"${r['min_price']} ➝ ${r['max_price']}")
+            cols[4].write(f"${mn} ➝ ${mx}")
             
-            in_range = r['min_price'] <= d['price'] <= r['max_price']
-            vol_ok = d['volume'] >= r['min_vol']
-            
-            # Status Logic
-            if in_range and vol_ok:
-                status = "bg-green"; txt = "READY"
-            elif in_range and not vol_ok:
-                status = "bg-yellow"; txt = "LOW VOL"
-            else:
-                status = "bg-red"; txt = "OUT"
+            in_range = mn <= d['price'] <= mx
+            vol_ok = d['volume'] >= mv
+            status = "bg-green" if (in_range and vol_ok) else ("bg-yellow" if in_range else "bg-red")
+            txt = "READY" if status=="bg-green" else ("VOL" if status=="bg-yellow" else "OUT")
             
             cols[5].markdown(f'<span class="badge {status}">{txt}</span>', unsafe_allow_html=True)
             
-            # Alert Logic
             if status == "bg-green":
                 last = str(r.get('last_alert', ''))
                 send = False
-                if not last or last == "":
-                    send = True
+                if not last or last == "": send = True
                 else:
                     try:
                         if (datetime.now() - datetime.fromisoformat(last)).seconds > 3600: send = True
                     except: send = True
                 
                 if send:
-                    if send_email(u_email, r['symbol'], d['price'], d['volume'], r['min_price'], r['max_price']):
-                        update_last_alert(u_email, r['symbol'])
-                        st.toast(f"Alert Sent: {r['symbol']}", icon="🚀")
+                    if send_email(u_email, sym, d['price'], d['volume'], mn, mx):
+                        update_last_alert(u_email, sym)
+                        st.toast(f"Alert Sent: {sym}", icon="🚀")
 
-            if cols[6].button("🗑️", key=f"del_{r['symbol']}"):
-                delete_rule(u_email, r['symbol'])
+            if cols[6].button("🗑️", key=f"del_{sym}"):
+                delete_rule(u_email, sym)
                 st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -322,8 +348,8 @@ else:
         with st.form("new"):
             c1,c2,c3,c4 = st.columns(4)
             s = c1.text_input("Symbol")
-            mn = c2.number_input("Min $", 100.0)
-            mx = c3.number_input("Max $", 200.0)
+            mn = c2.number_input("Min", 100.0)
+            mx = c3.number_input("Max", 200.0)
             mv = c4.number_input("Min Vol", 1000000)
             if st.form_submit_button("Add Alert"):
                 if s:
