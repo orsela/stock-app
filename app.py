@@ -1,4 +1,4 @@
-"""Stock Alerts v5.5 - Fixed Logos (Clearbit) + Stronger Theme Engine"""
+"""Stock Alerts v5.6 - Fixed Indentation & Stable Layout"""
 import streamlit as st
 import json, os, hashlib, time
 import yfinance as yf
@@ -25,7 +25,6 @@ if st.session_state.theme == 'dark':
     BG_MAIN = "#0e1117"
     BG_CARD = "#1e293b"
     TEXT_MAIN = "#ffffff"
-    TEXT_SEC = "#b0b0b0"
     BTN_ICON = "☀️"
     BORDER = "#333333"
     INPUT_BG = "#262730"
@@ -33,79 +32,48 @@ else:
     BG_MAIN = "#ffffff"
     BG_CARD = "#f0f2f6"
     TEXT_MAIN = "#000000"
-    TEXT_SEC = "#555555"
     BTN_ICON = "🌙"
     BORDER = "#d1d5db"
     INPUT_BG = "#ffffff"
 
-# CSS אגרסיבי שדורס את ברירת המחדל של סטרימליט
+# CSS
 st.markdown(f"""
 <style>
-    /* צבע רקע ראשי */
-    .stApp {{
-        background-color: {BG_MAIN};
-    }}
+    .stApp {{ background-color: {BG_MAIN}; }}
+    h1, h2, h3, h4, h5, h6, p, label, span, div {{ color: {TEXT_MAIN} !important; }}
     
-    /* טקסטים גלובליים */
-    h1, h2, h3, h4, h5, h6, p, label, span, div {{
-        color: {TEXT_MAIN} !important;
-    }}
-    
-    /* תיקון צבעי קלט (Input Fields) כדי שיראו טוב בשני המצבים */
     .stTextInput input, .stNumberInput input {{
         color: {TEXT_MAIN} !important;
         background-color: {INPUT_BG} !important;
         border-color: {BORDER} !important;
     }}
     
-    /* Login/Card Container */
     .custom-card {{
         background-color: {BG_CARD};
-        padding: 2rem;
-        border-radius: 15px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        border-radius: 12px;
         border: 1px solid {BORDER};
-        margin-bottom: 20px;
+        margin-bottom: 10px;
     }}
     
-    /* Badges */
     .badge {{
-        padding: 4px 8px;
-        border-radius: 6px;
-        font-weight: bold;
-        font-size: 0.8rem;
-        color: white !important;
+        padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; color: white !important;
     }}
     .bg-green {{background-color: #28a745;}}
     .bg-red {{background-color: #dc3545;}}
 
-    /* תמונת לוגו */
     .stock-logo {{
-        width: 35px;
-        height: 35px;
-        border-radius: 50%;
-        object-fit: contain;
-        background-color: #fff; /* רקע לבן תמיד ללוגו */
-        padding: 2px;
-        border: 1px solid #ccc;
-    }}
-    
-    /* מדדים למעלה - תיקון רקע */
-    div[data-testid="metric-container"] {{
-        background-color: {BG_CARD};
-        border: 1px solid {BORDER};
-        padding: 10px;
-        border-radius: 8px;
+        width: 35px; height: 35px; border-radius: 50%; object-fit: contain;
+        background-color: #fff; padding: 2px; border: 1px solid #ccc;
     }}
 </style>
 """, unsafe_allow_html=True)
 
 # ==========================================
-#              לוגיקה (Backend)
+#              BACKEND
 # ==========================================
 
 USERS_FILE = "users.json"
-RULES_FILE = "rules.json"
 
 def load_users():
     return json.load(open(USERS_FILE)) if os.path.exists(USERS_FILE) else {}
@@ -126,62 +94,37 @@ def register_user(email, pw):
     save_users(users)
     return True
 
-def send_whatsapp(phone, symbol, price, min_p, max_p):
-    try:
-        if "twilio" not in st.secrets: return False
-        sid = st.secrets["twilio"]["account_sid"]
-        token = st.secrets["twilio"]["auth_token"]
-        from_num = st.secrets["twilio"]["from_number"]
-        if not sid or not token: return False
-        from twilio.rest import Client
-        client = Client(sid, token)
-        msg = f"🚀 *Stock Alert*\n\n📈 *{symbol}*\n💰 Price: ${price}\n🎯 Range: ${min_p} - ${max_p}"
-        client.messages.create(body=msg, from_=f'whatsapp:{from_num}', to=f'whatsapp:{phone}')
-        return True
-    except: return False
-
 @st.cache_data(ttl=60)
 def get_stock_data(symbol):
     try:
         ticker = yf.Ticker(symbol)
         info = ticker.info
-        
-        # 1. מחיר
         price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
         prev = info.get('previousClose')
         
-        # 2. לוגו (שיטה חדשה: דרך Clearbit)
-        # אנחנו לוקחים את הדומיין של החברה ומבקשים לוגו
+        # Logo Logic via Clearbit
         website = info.get('website', '')
-        logo_url = "https://cdn-icons-png.flaticon.com/512/666/666201.png" # ברירת מחדל
-        
+        logo_url = "https://cdn-icons-png.flaticon.com/512/666/666201.png"
         if website:
-            # ניקוי ה-URL כדי לקבל רק domain.com
             domain = website.replace('https://', '').replace('http://', '').replace('www.', '').split('/')[0]
-            if domain:
-                logo_url = f"https://logo.clearbit.com/{domain}"
+            if domain: logo_url = f"https://logo.clearbit.com/{domain}"
 
         change = 0.0
         if price and prev:
             change = ((price - prev) / prev) * 100
             
-        return {
-            'price': round(price, 2), 
-            'change': round(change, 2),
-            'logo': logo_url
-        } if price else None
+        return {'price': round(price, 2), 'change': round(change, 2), 'logo': logo_url} if price else None
     except: return None
 
-# Session State
 if 'user' not in st.session_state: st.session_state.user = None
 if 'rules' not in st.session_state: st.session_state.rules = []
 
 # ==========================================
-#              UI - מסך כניסה
+#              UI LOGIC
 # ==========================================
 
+# --- LOGIN SCREEN ---
 if st.session_state.user is None:
-    # Login Card Container
     st.markdown(f"""
     <div style="display: flex; justify-content: center; margin-top: 50px;">
         <div class="custom-card" style="width: 400px; text-align: center;">
@@ -192,7 +135,6 @@ if st.session_state.user is None:
     </div>
     """, unsafe_allow_html=True)
 
-    # Forms (מוזרקים מתחת לכרטיס ויזואלית)
     c1, c2, c3 = st.columns([1, 1, 1])
     with c2:
         tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
@@ -215,10 +157,89 @@ if st.session_state.user is None:
                         st.success("Created! Please Login.")
                     else: st.error("User exists")
 
-# ==========================================
-#              UI - דשבורד
-# ==========================================
+# --- DASHBOARD SCREEN ---
 else:
-    # Header
+    # Header (No 'with' used here to prevent indentation errors)
     c_title, c_theme = st.columns([9, 1])
-    with c_title:
+    c_title.markdown(f"### 👋 Hello, {st.session_state.user['email']}")
+    if c_theme.button(BTN_ICON, help="Switch Theme"):
+        toggle_theme()
+        st.rerun()
+    
+    st.divider()
+
+    # Market Overview
+    st.markdown("##### 📊 Market Status")
+    m1, m2, m3 = st.columns(3)
+    
+    # Using direct calls instead of complex blocks
+    d_sp = get_stock_data("^GSPC")
+    m1.metric("S&P 500", f"${d_sp['price']:,}" if d_sp else "--", f"{d_sp['change']}%" if d_sp else "--")
+    
+    d_nd = get_stock_data("^IXIC")
+    m2.metric("NASDAQ", f"${d_nd['price']:,}" if d_nd else "--", f"{d_nd['change']}%" if d_nd else "--")
+    
+    d_btc = get_stock_data("BTC-USD")
+    m3.metric("Bitcoin", f"${d_btc['price']:,}" if d_btc else "--", f"{d_btc['change']}%" if d_btc else "--")
+
+    st.markdown("---")
+
+    # Sidebar
+    with st.sidebar:
+        st.markdown("### Settings")
+        whatsapp_num = st.text_input("WhatsApp Number", placeholder="+972...", key="wa")
+        if st.button("Logout", type="primary"):
+            st.session_state.user = None
+            st.rerun()
+
+    # Watchlist
+    st.markdown("##### 📜 Your Watchlist")
+    
+    for i, rule in enumerate(st.session_state.rules):
+        data = get_stock_data(rule['symbol'])
+        
+        # Start Card Wrapper
+        st.markdown(f'<div class="custom-card" style="padding: 1rem;">', unsafe_allow_html=True)
+        
+        # Columns: Logo | Symbol | Price | Range | Status | Delete
+        cols = st.columns([0.5, 1, 1, 2, 1, 0.5])
+        
+        if data:
+            price = data['price']
+            
+            # 1. Logo
+            cols[0].markdown(f'<img src="{data["logo"]}" class="stock-logo">', unsafe_allow_html=True)
+            
+            # 2. Symbol
+            cols[1].markdown(f"**{rule['symbol']}**")
+            
+            # 3. Price
+            cols[2].write(f"${price}")
+            
+            # 4. Range
+            cols[3].write(f"${rule['min']} ➝ ${rule['max']}")
+            
+            # 5. Status Badge
+            in_range = rule['min'] <= price <= rule['max']
+            badge_class = "bg-green" if in_range else "bg-red"
+            badge_text = "IN RANGE" if in_range else "OUT"
+            cols[4].markdown(f'<span class="badge {badge_class}">{badge_text}</span>', unsafe_allow_html=True)
+            
+            # 6. Delete
+            if cols[5].button("🗑️", key=f"del_{i}"):
+                st.session_state.rules.pop(i)
+                st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True) # End Card
+
+    # Add New
+    with st.expander("➕ Add Stock"):
+        with st.form("new_stock"):
+            c1, c2, c3 = st.columns(3)
+            s = c1.text_input("Symbol", "TSLA")
+            mn = c2.number_input("Min", 100.0)
+            mx = c3.number_input("Max", 300.0)
+            if st.form_submit_button("Add"):
+                if s:
+                    st.session_state.rules.append({'symbol': s.upper(), 'min': mn, 'max': mx})
+                    st.rerun()
