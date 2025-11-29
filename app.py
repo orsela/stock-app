@@ -1,4 +1,4 @@
-"""Stock Alerts v5.6 - Fixed Indentation & Stable Layout"""
+"""Stock Alerts v5.7 - Edit Feature (Pop-up Dialog)"""
 import streamlit as st
 import json, os, hashlib, time
 import yfinance as yf
@@ -66,6 +66,12 @@ st.markdown(f"""
         width: 35px; height: 35px; border-radius: 50%; object-fit: contain;
         background-color: #fff; padding: 2px; border: 1px solid #ccc;
     }}
+    
+    /* כפתורי פעולה קטנים */
+    button[kind="secondary"] {{
+        padding: 0px 10px;
+        height: auto;
+    }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -102,7 +108,7 @@ def get_stock_data(symbol):
         price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
         prev = info.get('previousClose')
         
-        # Logo Logic via Clearbit
+        # Logo Logic
         website = info.get('website', '')
         logo_url = "https://cdn-icons-png.flaticon.com/512/666/666201.png"
         if website:
@@ -118,6 +124,24 @@ def get_stock_data(symbol):
 
 if 'user' not in st.session_state: st.session_state.user = None
 if 'rules' not in st.session_state: st.session_state.rules = []
+
+# ==========================================
+#              DIALOGS (חלונות קופצים)
+# ==========================================
+
+@st.dialog("Edit Alert ✏️")
+def edit_dialog(index, current_rule):
+    st.write(f"Editing settings for **{current_rule['symbol']}**")
+    
+    col_min, col_max = st.columns(2)
+    new_min = col_min.number_input("Min Price", value=float(current_rule['min']))
+    new_max = col_max.number_input("Max Price", value=float(current_rule['max']))
+    
+    if st.button("Save Changes", type="primary"):
+        # עדכון הכלל בזיכרון
+        st.session_state.rules[index]['min'] = new_min
+        st.session_state.rules[index]['max'] = new_max
+        st.rerun()
 
 # ==========================================
 #              UI LOGIC
@@ -159,7 +183,6 @@ if st.session_state.user is None:
 
 # --- DASHBOARD SCREEN ---
 else:
-    # Header (No 'with' used here to prevent indentation errors)
     c_title, c_theme = st.columns([9, 1])
     c_title.markdown(f"### 👋 Hello, {st.session_state.user['email']}")
     if c_theme.button(BTN_ICON, help="Switch Theme"):
@@ -172,7 +195,6 @@ else:
     st.markdown("##### 📊 Market Status")
     m1, m2, m3 = st.columns(3)
     
-    # Using direct calls instead of complex blocks
     d_sp = get_stock_data("^GSPC")
     m1.metric("S&P 500", f"${d_sp['price']:,}" if d_sp else "--", f"{d_sp['change']}%" if d_sp else "--")
     
@@ -201,8 +223,8 @@ else:
         # Start Card Wrapper
         st.markdown(f'<div class="custom-card" style="padding: 1rem;">', unsafe_allow_html=True)
         
-        # Columns: Logo | Symbol | Price | Range | Status | Delete
-        cols = st.columns([0.5, 1, 1, 2, 1, 0.5])
+        # Columns: Logo | Symbol | Price | Range | Status | Actions (Edit/Del)
+        cols = st.columns([0.5, 1, 1, 2, 1, 1])
         
         if data:
             price = data['price']
@@ -225,10 +247,17 @@ else:
             badge_text = "IN RANGE" if in_range else "OUT"
             cols[4].markdown(f'<span class="badge {badge_class}">{badge_text}</span>', unsafe_allow_html=True)
             
-            # 6. Delete
-            if cols[5].button("🗑️", key=f"del_{i}"):
-                st.session_state.rules.pop(i)
-                st.rerun()
+            # 6. Actions (Edit & Delete)
+            with cols[5]:
+                col_edit, col_del = st.columns(2)
+                # כפתור עריכה
+                if col_edit.button("✏️", key=f"edit_{i}", help="Edit Alert"):
+                    edit_dialog(i, rule)
+                
+                # כפתור מחיקה
+                if col_del.button("🗑️", key=f"del_{i}", help="Delete Alert"):
+                    st.session_state.rules.pop(i)
+                    st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True) # End Card
 
