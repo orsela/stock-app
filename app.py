@@ -1,4 +1,4 @@
-"""Stock Alerts v5.2 - Fixed Syntax & Stability"""
+"""Stock Alerts v5.3 - Dashboard Returns!"""
 import streamlit as st
 import json, os, hashlib, time
 import yfinance as yf
@@ -34,8 +34,7 @@ else:
     BTN_ICON = "🌙"
     BORDER_COLOR = "#e0e0e0"
 
-# CSS - שימוש בפורמט בטוח למניעת שגיאות
-# שימו לב: בסוגריים מסולסלים כפולים {{ }} בתוך f-string
+# CSS
 st.markdown(f"""
 <style>
     .stApp {{
@@ -43,7 +42,7 @@ st.markdown(f"""
         color: {TEXT_COLOR};
     }}
     
-    /* Login Card Container */
+    /* Login Card */
     .login-container {{
         background-color: {CARD_BG};
         padding: 2rem;
@@ -55,31 +54,39 @@ st.markdown(f"""
         margin: 2rem auto;
     }}
     
-    h1, h2, h3, p, div, span {{
+    h1, h2, h3, p, div, span, label {{
         color: {TEXT_COLOR} !important;
     }}
+    
+    /* מדדים למעלה */
+    div[data-testid="metric-container"] {{
+        background-color: {CARD_BG};
+        border: 1px solid {BORDER_COLOR};
+        padding: 10px;
+        border-radius: 10px;
+        text-align: center;
+    }}
 
-    /* Google Button Style */
+    /* Google Button Fake */
     .google-container {{
         background-color: white;
         border: 1px solid #dadce0;
         border-radius: 20px;
         padding: 10px;
         margin-bottom: 20px;
-        cursor: pointer;
+        cursor: not-allowed; /* מסמן שאי אפשר ללחוץ כרגע */
         display: flex;
         align-items: center;
         justify-content: center;
+        opacity: 0.7;
     }}
     
     .google-text {{
         color: #3c4043 !important;
         font-weight: 500;
-        text-decoration: none;
         margin-left: 10px;
     }}
     
-    /* Separator */
     .separator {{
         display: flex;
         align-items: center;
@@ -88,16 +95,8 @@ st.markdown(f"""
         opacity: 0.5;
     }}
     
-    .line {{
-        flex: 1;
-        height: 1px;
-        background-color: {TEXT_COLOR};
-    }}
-    
-    .or-text {{
-        padding: 0 10px;
-        font-size: 12px;
-    }}
+    .line {{flex: 1; height: 1px; background-color: {TEXT_COLOR};}}
+    .or-text {{padding: 0 10px; font-size: 12px;}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -106,7 +105,6 @@ st.markdown(f"""
 # ==========================================
 
 USERS_FILE = "users.json"
-RULES_FILE = "rules.json"
 
 def load_users():
     return json.load(open(USERS_FILE)) if os.path.exists(USERS_FILE) else {}
@@ -127,44 +125,26 @@ def register_user(email, pw):
     save_users(users)
     return True
 
-def send_whatsapp(phone, symbol, price, min_p, max_p):
-    try:
-        # Check if secrets exist
-        if "twilio" not in st.secrets:
-            return False
-            
-        sid = st.secrets["twilio"]["account_sid"]
-        token = st.secrets["twilio"]["auth_token"]
-        from_num = st.secrets["twilio"]["from_number"]
-        
-        if not sid or not token:
-            return False
-            
-        from twilio.rest import Client
-        client = Client(sid, token)
-        
-        msg_body = f"🚀 *Stock Alert*\n\n📈 *{symbol}*\n💰 Price: ${price}\n🎯 Range: ${min_p} - ${max_p}"
-        
-        client.messages.create(
-            body=msg_body,
-            from_=f'whatsapp:{from_num}',
-            to=f'whatsapp:{phone}'
-        )
-        return True
-    except Exception as e:
-        print(f"Twilio Error: {e}")
-        return False
-
+# פונקציה משופרת שמחזירה גם אחוז שינוי (בשביל הדשבורד)
 @st.cache_data(ttl=60)
 def get_stock_data(symbol):
     try:
         ticker = yf.Ticker(symbol)
         info = ticker.info
+        
+        # מחיר נוכחי
         price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
-        return {'price': round(price, 2)} if price else None
+        # מחיר סגירה קודם (לחישוב אחוזים)
+        prev = info.get('previousClose')
+        
+        if price and prev:
+            change = ((price - prev) / prev) * 100
+            return {'price': round(price, 2), 'change': round(change, 2)}
+            
+        return {'price': round(price, 2), 'change': 0.0} if price else None
     except: return None
 
-# Session State Init
+# Session State
 if 'user' not in st.session_state: st.session_state.user = None
 if 'rules' not in st.session_state: st.session_state.rules = []
 
@@ -173,27 +153,25 @@ if 'rules' not in st.session_state: st.session_state.rules = []
 # ==========================================
 
 if st.session_state.user is None:
-    # כרטיס מעוצב ב-HTML טהור
     st.markdown(f"""
     <div class="login-container">
         <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="60">
         <h2 style="margin-top:10px;">Welcome to StockWatcher</h2>
         <p style="opacity:0.7; margin-bottom:20px;">Sign in to monitor your portfolio</p>
         
-        <div class="google-container">
+        <div class="google-container" title="Google Login requires API Keys configuration">
             <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="18">
-            <span class="google-text">Continue with Google</span>
+            <span class="google-text">Login with Google (Demo)</span>
         </div>
         
         <div class="separator">
             <div class="line"></div>
-            <div class="or-text">OR</div>
+            <div class="or-text">OR EMAIL</div>
             <div class="line"></div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-    # טפסי הכניסה מוזרקים מתחת ל-HTML
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
@@ -222,7 +200,7 @@ if st.session_state.user is None:
 #              UI - דשבורד ראשי
 # ==========================================
 else:
-    # Header
+    # 1. Header & Theme Toggle
     top_col1, top_col2 = st.columns([8, 1])
     with top_col1:
         st.markdown(f"### 👋 Hello, {st.session_state.user['email']}")
@@ -233,52 +211,52 @@ else:
             
     st.divider()
 
-    # Sidebar
+    # 2. Market Overview (החזרנו את המדדים!)
+    st.subheader("📊 Market Overview")
+    m1, m2, m3 = st.columns(3)
+    
+    # S&P 500
+    sp_data = get_stock_data("^GSPC")
+    if sp_data: m1.metric("S&P 500", f"${sp_data['price']:,}", f"{sp_data['change']}%")
+    else: m1.metric("S&P 500", "Loading...", "0%")
+    
+    # NASDAQ
+    nd_data = get_stock_data("^IXIC")
+    if nd_data: m2.metric("NASDAQ", f"${nd_data['price']:,}", f"{nd_data['change']}%")
+    else: m2.metric("NASDAQ", "Loading...", "0%")
+    
+    # BITCOIN
+    btc_data = get_stock_data("BTC-USD")
+    if btc_data: m3.metric("Bitcoin", f"${btc_data['price']:,}", f"{btc_data['change']}%")
+    else: m3.metric("Bitcoin", "Loading...", "0%")
+
+    st.divider()
+
+    # 3. Sidebar
     with st.sidebar:
         st.markdown("### Settings")
         whatsapp_num = st.text_input("WhatsApp Number", placeholder="+97250...", key="wa_num")
-        st.caption("Required for alerts. Format: +972...")
         
         if st.button("Logout", type="primary"):
             st.session_state.user = None
             st.rerun()
 
-    # Watchlist
+    # 4. Watchlist (המשך רגיל)
     st.subheader("Your Watchlist")
-    
-    # הצגת התראות
     for i, rule in enumerate(st.session_state.rules):
         data = get_stock_data(rule['symbol'])
         if data:
             price = data['price']
             
-            # Logic
-            status_color = "🟢"
-            if price < rule['min'] or price > rule['max']:
-                status_color = "🔴"
-                
-                # Cooldown & Alert Logic
-                last_alert = rule.get('last_alert')
-                should_alert = False
-                if not last_alert: should_alert = True
-                else:
-                    try:
-                        time_diff = (datetime.now() - datetime.fromisoformat(last_alert)).seconds
-                        if time_diff > 3600: should_alert = True
-                    except: should_alert = True
-                
-                if should_alert and whatsapp_num:
-                    if send_whatsapp(whatsapp_num, rule['symbol'], price, rule['min'], rule['max']):
-                        rule['last_alert'] = datetime.now().isoformat()
+            # Status Logic
+            color = "🟢" if rule['min'] <= price <= rule['max'] else "🔴"
             
-            # Row Display
             with st.container():
                 c1, c2, c3, c4, c5 = st.columns([1, 1, 2, 1, 1])
                 c1.markdown(f"**{rule['symbol']}**")
                 c2.write(f"${price}")
-                # תיקון תצוגת טווח (מספרים משמאל לימין)
-                c3.markdown(f"${rule['min']} ➝ ${rule['max']}") 
-                c4.write(status_color)
+                c3.markdown(f"${rule['min']} ➝ ${rule['max']}")
+                c4.write(color)
                 if c5.button("🗑️", key=f"del_{i}"):
                     st.session_state.rules.pop(i)
                     st.rerun()
