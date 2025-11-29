@@ -1,4 +1,4 @@
-"""Stock Alerts v7.6 - Final Polish (Edit + Toggle + Phone Input)"""
+"""Stock Alerts v7.8 - Registration with Phone Sync"""
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -17,57 +17,50 @@ st.set_page_config(page_title="StockWatcher", page_icon="📈", layout="wide")
 ADMIN_EMAIL = "orsela@gmail.com"
 
 # ==========================================
-#              ניהול THEME (Toggle)
+#              ניהול THEME
 # ==========================================
-# שימוש ב-Toggle במקום כפתור
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
 
-# פונקציית עזר לקביעת הצבעים
-def get_theme_colors(theme_mode):
-    if theme_mode == 'dark':
-        return "#0e1117", "#1e293b", "#ffffff", "#333333", "#262730"
-    else:
-        return "#ffffff", "#f0f2f6", "#000000", "#d1d5db", "#ffffff"
+BG_MAIN, BG_CARD, TEXT_MAIN, BORDER, INPUT_BG = "#0e1117", "#1e293b", "#ffffff", "#333333", "#262730"
+if st.session_state.theme == 'light':
+    BG_MAIN, BG_CARD, TEXT_MAIN, BORDER, INPUT_BG = "#ffffff", "#f0f2f6", "#000000", "#d1d5db", "#ffffff"
 
-BG_MAIN, BG_CARD, TEXT_MAIN, BORDER, INPUT_BG = get_theme_colors(st.session_state.theme)
+def toggle_theme():
+    st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
 
-# CSS מתוקן לכפתורים שנעלמים
 st.markdown(f"""
 <style>
     .stApp {{ background-color: {BG_MAIN}; }}
     h1, h2, h3, h4, h5, h6, p, label, span, div {{ color: {TEXT_MAIN} !important; }}
     
-    /* תיקון שדות קלט */
     .stTextInput input, .stNumberInput input {{
         color: {TEXT_MAIN} !important;
         background-color: {INPUT_BG} !important;
         border-color: {BORDER} !important;
     }}
     
-    /* כרטיסים */
     .custom-card {{
         background-color: {BG_CARD};
         padding: 1.5rem;
         border-radius: 12px;
         border: 1px solid {BORDER};
         margin-bottom: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }}
     
-    /* תיקון כפתור Sign In שלא רואים טקסט */
-    div.stButton > button:first-child {{
-        background-color: #ff4b4b;
+    /* Login Button Fix */
+    [data-testid="stFormSubmitButton"] > button {{
+        background-color: #ff4b4b !important;
         color: white !important;
-        border: none;
-        font-weight: bold;
+        border: none !important;
+        font-weight: bold !important;
+        width: 100%;
     }}
-    div.stButton > button:hover {{
-        background-color: #ff6b6b;
-        color: white !important;
+    [data-testid="stFormSubmitButton"] > button:hover {{
+        background-color: #ff6b6b !important;
     }}
 
-    /* כפתורים משניים (כמו עריכה/מחיקה) */
     button[kind="secondary"] {{
         background-color: transparent !important;
         border: 1px solid {BORDER} !important;
@@ -121,7 +114,8 @@ def login_user(email, pw):
         return None
     except: return None
 
-def register_user(email, pw):
+# פונקציית הרשמה מעודכנת - מקבלת טלפון
+def register_user(email, pw, phone):
     try:
         sh = get_db()
         if not sh: return False
@@ -129,8 +123,10 @@ def register_user(email, pw):
         try:
             if ws.find(email): return False
         except: pass
+        
         hashed_pw = hashlib.sha256(pw.encode()).hexdigest()
-        ws.append_row([email, hashed_pw, datetime.now().isoformat()])
+        # שמירה עם 4 עמודות: אימייל, סיסמה, תאריך, טלפון
+        ws.append_row([email, hashed_pw, datetime.now().isoformat(), phone])
         return True
     except: return False
 
@@ -166,10 +162,7 @@ def update_rule(email, symbol, new_min, new_max, new_vol):
     try:
         sh = get_db()
         ws = sh.worksheet("rules")
-        # פתרון חכם לעדכון: מציאת התא לפי סימול ומייל
-        # (בשיטה פשוטה לדמו: מוחקים ויוצרים מחדש, זה הכי בטוח למניעת באגים בדמו)
         delete_rule(email, symbol)
-        # הוספה עם השדות המעודכנים (מאפס את ההתראה האחרונה שזה טוב)
         ws.append_row([email, symbol, new_min, new_max, new_vol, ""])
         return True
     except: return False
@@ -244,13 +237,11 @@ def get_data(symbol):
     except: return None
 
 # ==========================================
-#              DIALOGS (עריכה)
+#              DIALOGS
 # ==========================================
 @st.dialog("Edit Alert ✏️")
 def edit_dialog(current_rule, user_email):
     st.write(f"Editing **{current_rule['symbol']}**")
-    
-    # טעינת נתונים קיימים
     try:
         old_min = float(current_rule.get('min_price', 0))
         old_max = float(current_rule.get('max_price', 0))
@@ -273,61 +264,70 @@ def edit_dialog(current_rule, user_email):
 
 if 'user' not in st.session_state: st.session_state.user = None
 
-# --- LOGIN ---
+# --- LOGIN / REGISTER ---
 if st.session_state.user is None:
     st.markdown("""<div style="display:flex;justify-content:center;margin-top:50px;">
     <div class="custom-card" style="width:400px;text-align:center;">
-    <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="50">
+    <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="60">
     <h2>StockWatcher</h2><p>Login to continue</p></div></div>""", unsafe_allow_html=True)
     
     c1,c2,c3 = st.columns([1,1,1])
     with c2:
         tab1, tab2 = st.tabs(["Login", "Register"])
+        
+        # טאב כניסה
         with tab1:
             with st.form("l"):
-                e = st.text_input("Email"); p = st.text_input("Password", type="password")
+                e = st.text_input("Email")
+                p = st.text_input("Password", type="password")
                 if st.form_submit_button("Sign In"):
                     u = login_user(e, p)
                     if u: st.session_state.user = u; st.rerun()
                     else: st.error("Failed")
+        
+        # טאב הרשמה מעודכן
         with tab2:
             with st.form("r"):
-                e = st.text_input("Email"); p = st.text_input("Password", type="password")
+                e = st.text_input("Email")
+                p = st.text_input("Password", type="password")
+                # שדה טלפון חדש
+                ph = st.text_input("WhatsApp Phone", placeholder="+97250...", help="For alerts")
+                
                 if st.form_submit_button("Sign Up"):
-                    if register_user(e, p): st.success("Created!");
-                    else: st.error("Error")
+                    if register_user(e, p, ph):
+                        st.success("Created! Login now.")
+                    else: st.error("Error or Exists")
 
 # --- DASHBOARD ---
 else:
     u_email = str(st.session_state.user.get('email', 'User'))
     
-    # Sidebar Setup (כולל וואטסאפ)
+    # טעינת הטלפון השמור מהגוגל שיטס
+    saved_phone = str(st.session_state.user.get('phone', ''))
+    
+    # Sidebar
     with st.sidebar:
         st.header("Settings")
         
-        # WhatsApp Input
-        st.markdown("📱 **WhatsApp Alerts**")
-        wa_num = st.text_input("Phone Number", placeholder="+972501234567", help="Format: +972...")
+        # שדה טלפון - מוזן אוטומטית אם קיים ביוזר
+        wa_num = st.text_input("Phone Number", value=saved_phone, placeholder="+972...", help="Synced with account")
         
         st.divider()
         if st.button("Logout"): st.session_state.user = None; st.rerun()
         
-        # Admin
         if u_email.strip().lower() == ADMIN_EMAIL.lower():
             st.divider()
             if st.checkbox("🛡️ Admin Panel"):
-                st.markdown("## Admin Database View")
                 sh = get_db()
                 if sh:
                     st.write("Users:"); st.dataframe(pd.DataFrame(sh.worksheet("users").get_all_records()))
                     st.write("Alerts:"); st.dataframe(pd.DataFrame(sh.worksheet("rules").get_all_records()))
                 st.stop()
 
-    # Top Bar (Toggle Switch)
+    # Top Bar
     c_head, c_tog = st.columns([8, 2])
     c_head.markdown(f"### Hello, {u_email}")
     
-    # מתג יום לילה
     is_dark = st.toggle("🌙 Dark Mode", value=(st.session_state.theme == 'dark'))
     if is_dark and st.session_state.theme != 'dark':
         st.session_state.theme = 'dark'
@@ -360,7 +360,6 @@ else:
             st.markdown('<div class="custom-card" style="padding:1rem;">', unsafe_allow_html=True)
             cols = st.columns([0.5, 1, 1, 1, 1.5, 1, 1])
             
-            # Safe Get
             sym = r.get('symbol', 'N/A')
             mn = r.get('min_price', 0)
             mx = r.get('max_price', 0)
@@ -379,7 +378,6 @@ else:
             
             cols[5].markdown(f'<span class="badge {status}">{txt}</span>', unsafe_allow_html=True)
             
-            # Alert Logic
             if status == "bg-green":
                 last = str(r.get('last_alert', ''))
                 send = False
@@ -390,18 +388,17 @@ else:
                     except: send = True
                 
                 if send:
-                    # Email
                     email_sent = send_email(u_email, sym, d['price'], d['volume'], mn, mx)
-                    # WhatsApp (אם הוזן)
                     wa_sent = False
-                    if wa_num:
-                        wa_sent = send_whatsapp(wa_num, sym, d['price'], d['volume'], mn, mx)
+                    # שימוש במספר מהסרגל או מהיוזר
+                    final_phone = wa_num if wa_num else saved_phone
+                    if final_phone:
+                        wa_sent = send_whatsapp(final_phone, sym, d['price'], d['volume'], mn, mx)
                         
                     if email_sent or wa_sent:
                         update_last_alert(u_email, sym)
                         st.toast(f"Alert Sent: {sym}", icon="🚀")
 
-            # Actions Column (Edit / Delete)
             with cols[6]:
                 ce, cd = st.columns(2)
                 if ce.button("✏️", key=f"ed_{sym}"):
