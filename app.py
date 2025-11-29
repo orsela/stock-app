@@ -80,9 +80,21 @@ def login_user(email, pw):
         return users[email]
     return None
 
-def register_user(email, pw):
-    users = load_users()
-    if email in users: return False
+ddef register_user(email, pw):
+    try:
+        sh = get_db()
+        ws = sh.worksheet("users")
+        cell = ws.find(email)
+        if cell: 
+            st.error("User already exists in Sheet")
+            return False
+        
+        hashed_pw = hashlib.sha256(pw.encode()).hexdigest()
+        ws.append_row([email, hashed_pw, datetime.now().isoformat()])
+        return True
+    except Exception as e:
+        st.error(f"Google Sheets Error: {e}")  # <--- זה יציג לך הודעה אדומה עם הסיבה המדויקת!
+        return False
     users[email] = {
         'password': hashlib.sha256(pw.encode()).hexdigest(),
         'created': datetime.now().isoformat()
@@ -358,3 +370,4 @@ else:
                 if s:
                     st.session_state.rules.append({'symbol': s.upper(), 'min': mn, 'max': mx, 'min_vol': mv})
                     st.rerun()
+
