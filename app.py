@@ -1,4 +1,4 @@
-"""Stock Alerts v6.0 - Professional Dynamic HTML Emails"""
+"""Stock Alerts v6.1 - Volume Logic Restored"""
 import streamlit as st
 import json, os, hashlib, time
 import yfinance as yf
@@ -24,19 +24,9 @@ def toggle_theme():
 
 # הגדרת משתנים
 if st.session_state.theme == 'dark':
-    BG_MAIN = "#0e1117"
-    BG_CARD = "#1e293b"
-    TEXT_MAIN = "#ffffff"
-    BTN_ICON = "☀️"
-    BORDER = "#333333"
-    INPUT_BG = "#262730"
+    BG_MAIN, BG_CARD, TEXT_MAIN, BTN_ICON, BORDER, INPUT_BG = "#0e1117", "#1e293b", "#ffffff", "☀️", "#333333", "#262730"
 else:
-    BG_MAIN = "#ffffff"
-    BG_CARD = "#f0f2f6"
-    TEXT_MAIN = "#000000"
-    BTN_ICON = "🌙"
-    BORDER = "#d1d5db"
-    INPUT_BG = "#ffffff"
+    BG_MAIN, BG_CARD, TEXT_MAIN, BTN_ICON, BORDER, INPUT_BG = "#ffffff", "#f0f2f6", "#000000", "🌙", "#d1d5db", "#ffffff"
 
 # CSS
 st.markdown(f"""
@@ -59,9 +49,10 @@ st.markdown(f"""
     }}
     
     .badge {{
-        padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; color: white !important;
+        padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; color: white !important; display: inline-block;
     }}
     .bg-green {{background-color: #28a745;}}
+    .bg-yellow {{background-color: #ffc107; color: black !important;}} /* ווליום נמוך */
     .bg-red {{background-color: #dc3545;}}
 
     .stock-logo {{
@@ -77,13 +68,11 @@ st.markdown(f"""
 USERS_FILE = "users.json"
 
 def load_users():
-    if os.path.exists(USERS_FILE):
-        return json.load(open(USERS_FILE))
+    if os.path.exists(USERS_FILE): return json.load(open(USERS_FILE))
     return {}
 
 def save_users(users):
-    with open(USERS_FILE, 'w') as f:
-        json.dump(users, f, indent=2)
+    with open(USERS_FILE, 'w') as f: json.dump(users, f, indent=2)
 
 def login_user(email, pw):
     users = load_users()
@@ -93,8 +82,7 @@ def login_user(email, pw):
 
 def register_user(email, pw):
     users = load_users()
-    if email in users:
-        return False
+    if email in users: return False
     users[email] = {
         'password': hashlib.sha256(pw.encode()).hexdigest(),
         'created': datetime.now().isoformat()
@@ -102,101 +90,53 @@ def register_user(email, pw):
     save_users(users)
     return True
 
-# --- פונקציית המייל החדשה והמעוצבת ---
-def send_html_email(target_email, symbol, price, min_p, max_p):
+# --- פונקציית המייל (כולל ווליום) ---
+def send_html_email(target_email, symbol, price, volume, min_p, max_p, min_vol):
     try:
         if "email" not in st.secrets: return False
         sender = st.secrets["email"]["sender_email"]
         password = st.secrets["email"]["sender_password"]
         
-        # קביעת סוג ההתראה (חיובי/שלילי) לצורך עיצוב
         is_positive = price >= max_p
         
         if is_positive:
-            header_text = "מחיר יעד עליון הושג! 🎯"
-            theme_color = "#00c853" # ירוק
-            alert_status = "המניה פרצה את הגבול העליון"
+            header_text = "מחיר יעד הושג! 🎯"
+            theme_color = "#00c853"
+            alert_status = "פריצת גבול עליון + ווליום תקין"
         else:
             header_text = "התראת גבול תחתון ⚠️"
-            theme_color = "#d32f2f" # אדום
-            alert_status = "המניה ירדה מתחת לגבול התחתון"
+            theme_color = "#d32f2f"
+            alert_status = "ירידה מתחת למינימום + ווליום תקין"
 
-        subject = f"🔔 התראה: {symbol} - {header_text}"
+        subject = f"🔔 {symbol}: {header_text}"
         alert_time = datetime.now().strftime('%d/%m/%Y | %H:%M')
 
-        # תבנית ה-HTML הדינמית
         html_content = f"""
-        <!DOCTYPE html>
-        <html lang="he" dir="rtl">
-        <head>
-        <meta charset="UTF-8">
-        <style>
-            body, table, td, a {{ -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }}
-            table, td {{ mso-table-lspace: 0pt; mso-table-rspace: 0pt; }}
-            img {{ -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }}
-            table {{ border-collapse: collapse !important; }}
-            body {{ height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f7; }}
-        </style>
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f4f4f7;">
-            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                    <td align="center" style="padding: 20px 0;">
-                        <table border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                            <tr>
-                                <td align="center" style="padding: 25px; background-color: {theme_color};">
-                                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold;">
-                                        {header_text}
-                                    </h1>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td align="center" style="padding: 30px 20px;">
-                                    <h2 style="margin: 0; font-size: 36px; color: #333333;">{symbol}</h2>
-                                    <p style="margin: 5px 0 20px 0; color: #777777; font-size: 16px;">
-                                        סטטוס: <span style="font-weight: bold;">{alert_status}</span>
-                                    </p>
-                                    <table border="0" cellpadding="0" cellspacing="0" width="80%" style="background-color: #f9f9f9; border-radius: 8px; margin: 20px 0;">
-                                        <tr>
-                                            <td align="center" style="padding: 20px;">
-                                                <p style="margin: 0; color: #777777; font-size: 14px; font-weight: bold;">מחיר נוכחי בשוק</p>
-                                                <h3 style="margin: 5px 0 0 0; font-size: 42px; color: {theme_color}; font-weight: 800;">
-                                                    ${price}
-                                                </h3>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td align="center" style="border-top: 2px solid #eeeeee; padding: 15px;">
-                                                <p style="margin: 0; font-size: 14px; color: #555555;">
-                                                    טווח היעד שהגדרת: 
-                                                    <span style="font-weight: bold; direction: ltr; unicode-bidi: embed;">${min_p} - ${max_p}</span>
-                                                </p>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                    <p style="margin: 20px 0 30px 0; color: #999999; font-size: 12px;">זמן התראה: {alert_time}</p>
-                                    <table border="0" cellpadding="0" cellspacing="0">
-                                        <tr>
-                                            <td align="center" style="border-radius: 50px; background-color: {theme_color};">
-                                                <a href="https://finance.yahoo.com/quote/{symbol}" target="_blank" style="display: inline-block; padding: 14px 30px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: bold; border-radius: 50px;">
-                                                    צפה בגרף המניה
-                                                </a>
-                                            </td>
-                                        </tr>
-                                    </table>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td align="center" style="padding: 20px; background-color: #f4f4f7; color: #888888; font-size: 12px;">
-                                    <p style="margin: 0;">נשלח ע"י מערכת StockWatcher</p>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </body>
-        </html>
+        <div dir="rtl" style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+            <div style="background-color: {theme_color}; padding: 25px; text-align: center;">
+                <h1 style="color: #ffffff; margin: 0; font-size: 24px;">{header_text}</h1>
+            </div>
+            <div style="padding: 20px; background-color: #f9f9f9;">
+                <h2 style="margin: 0; font-size: 36px; color: #333; text-align: center;">{symbol}</h2>
+                <table style="width: 100%; margin-top: 20px; background: #fff; border-radius: 8px; padding: 10px;">
+                    <tr>
+                        <td style="padding: 10px; font-weight: bold;">מחיר:</td>
+                        <td style="padding: 10px; color: {theme_color}; font-size: 18px;">${price}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; font-weight: bold;">ווליום נוכחי:</td>
+                        <td style="padding: 10px;">{volume:,}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px; font-weight: bold;">דרישת ווליום:</td>
+                        <td style="padding: 10px;">מעל {min_vol:,}</td>
+                    </tr>
+                </table>
+                <div style="margin-top: 30px; text-align: center;">
+                    <a href="https://finance.yahoo.com/quote/{symbol}" style="background-color: {theme_color}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 50px;">צפה בגרף</a>
+                </div>
+            </div>
+        </div>
         """
 
         msg = MIMEMultipart()
@@ -215,15 +155,17 @@ def send_html_email(target_email, symbol, price, min_p, max_p):
         print(f"Email Error: {e}")
         return False
 
-# --- פונקציית וואטסאפ ---
-def send_whatsapp(phone, symbol, price, min_p, max_p):
+def send_whatsapp(phone, symbol, price, vol, min_p, max_p):
     try:
         if "twilio" not in st.secrets: return False
-        sid, token, from_num = st.secrets["twilio"]["account_sid"], st.secrets["twilio"]["auth_token"], st.secrets["twilio"]["from_number"]
+        sid = st.secrets["twilio"]["account_sid"]
+        token = st.secrets["twilio"]["auth_token"]
+        from_num = st.secrets["twilio"]["from_number"]
         if not sid: return False
+        
         from twilio.rest import Client
         client = Client(sid, token)
-        msg = f"🚀 *Stock Alert*\n\n📈 *{symbol}*\n💰 Price: ${price}\n🎯 Range: ${min_p} - ${max_p}"
+        msg = f"🚀 *{symbol} Alert*\n💰 Price: ${price}\n📊 Vol: {vol:,}\n🎯 Range: ${min_p}-${max_p}"
         client.messages.create(body=msg, from_=f'whatsapp:{from_num}', to=f'whatsapp:{phone}')
         return True
     except: return False
@@ -235,6 +177,7 @@ def get_stock_data(symbol):
         info = ticker.info
         price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
         prev = info.get('previousClose')
+        volume = info.get('volume', 0) # שליפת ווליום
         
         website = info.get('website', '')
         logo_url = "https://cdn-icons-png.flaticon.com/512/666/666201.png"
@@ -246,66 +189,65 @@ def get_stock_data(symbol):
         change = 0.0
         if price and prev:
             change = ((price - prev) / prev) * 100
-        return {'price': round(price, 2), 'change': round(change, 2), 'logo': logo_url} if price else None
+        return {'price': round(price, 2), 'change': round(change, 2), 'volume': volume, 'logo': logo_url} if price else None
     except: return None
 
 if 'user' not in st.session_state: st.session_state.user = None
 if 'rules' not in st.session_state: st.session_state.rules = []
 
 # ==========================================
-#              DIALOGS
+#              DIALOGS (עריכה)
 # ==========================================
 @st.dialog("Edit Alert ✏️")
 def edit_dialog(index, current_rule):
-    st.write(f"Editing settings for **{current_rule['symbol']}**")
-    col_min, col_max = st.columns(2)
-    new_min = col_min.number_input("Min Price", value=float(current_rule['min']))
-    new_max = col_max.number_input("Max Price", value=float(current_rule['max']))
+    st.write(f"Editing **{current_rule['symbol']}**")
+    c1, c2 = st.columns(2)
+    new_min = c1.number_input("Min Price", value=float(current_rule['min']))
+    new_max = c2.number_input("Max Price", value=float(current_rule['max']))
+    # טיפול תאימות לאחור (אם אין ווליום שמור בהתראה ישנה)
+    old_vol = float(current_rule.get('min_vol', 1000000))
+    new_vol = st.number_input("Min Volume", value=old_vol, step=100000.0)
     
-    if st.button("Save Changes", type="primary"):
+    if st.button("Save", type="primary"):
         st.session_state.rules[index]['min'] = new_min
         st.session_state.rules[index]['max'] = new_max
+        st.session_state.rules[index]['min_vol'] = new_vol
         st.rerun()
 
 # ==========================================
 #              UI LOGIC
 # ==========================================
 
-# --- LOGIN SCREEN ---
+# --- LOGIN ---
 if st.session_state.user is None:
     st.markdown(f"""
     <div style="display: flex; justify-content: center; margin-top: 50px;">
         <div class="custom-card" style="width: 400px; text-align: center;">
             <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="60">
-            <h2 style="margin-top:10px;">Welcome Back</h2>
+            <h2 style="margin-top:10px;">StockWatcher</h2>
             <p style="opacity: 0.7;">Sign in to monitor your portfolio</p>
         </div>
-    </div>
-    """, unsafe_allow_html=True)
-
+    </div>""", unsafe_allow_html=True)
     c1, c2, c3 = st.columns([1, 1, 1])
     with c2:
-        tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
-        with tab_login:
-            with st.form("login_form"):
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
+        tab_l, tab_s = st.tabs(["Login", "Sign Up"])
+        with tab_l:
+            with st.form("l"):
+                e = st.text_input("Email")
+                p = st.text_input("Password", type="password")
                 if st.form_submit_button("Sign In", use_container_width=True):
-                    user = login_user(email, password)
-                    if user:
-                        st.session_state.user = {'email': email}
-                        st.rerun()
-                    else: st.error("Login failed")
-        with tab_signup:
-            with st.form("signup_form"):
-                new_email = st.text_input("Email")
-                new_pass = st.text_input("Password", type="password")
-                if st.form_submit_button("Create Account", use_container_width=True):
-                    if register_user(new_email, new_pass):
-                        st.success("Created! Please Login.")
-                    else: st.error("User exists")
+                    u = login_user(e, p)
+                    if u: st.session_state.user = {'email': e}; st.rerun()
+                    else: st.error("Failed")
+        with tab_s:
+            with st.form("s"):
+                e = st.text_input("Email")
+                p = st.text_input("Password", type="password")
+                if st.form_submit_button("Sign Up", use_container_width=True):
+                    if register_user(e, p): st.success("Created!");
+                    else: st.error("Exists")
 
-# --- DASHBOARD SCREEN ---
+# --- DASHBOARD ---
 else:
     c_title, c_theme = st.columns([9, 1])
     c_title.markdown(f"### 👋 Hello, {st.session_state.user['email']}")
@@ -318,104 +260,101 @@ else:
     # Market Overview
     st.markdown("##### 📊 Market Status")
     m1, m2, m3 = st.columns(3)
-    
     d_sp = get_stock_data("^GSPC")
     m1.metric("S&P 500", f"${d_sp['price']:,}" if d_sp else "--", f"{d_sp['change']}%" if d_sp else "--")
-    
     d_nd = get_stock_data("^IXIC")
     m2.metric("NASDAQ", f"${d_nd['price']:,}" if d_nd else "--", f"{d_nd['change']}%" if d_nd else "--")
-    
     d_btc = get_stock_data("BTC-USD")
     m3.metric("Bitcoin", f"${d_btc['price']:,}" if d_btc else "--", f"{d_btc['change']}%" if d_btc else "--")
 
     st.markdown("---")
 
-    # Sidebar
     with st.sidebar:
         st.markdown("### Settings")
         whatsapp_num = st.text_input("WhatsApp Number", placeholder="+972...", key="wa")
-        st.info("ℹ️ Email alerts are active by default.")
-        
-        if st.button("Logout", type="primary"):
-            st.session_state.user = None
-            st.rerun()
+        if st.button("Logout", type="primary"): st.session_state.user = None; st.rerun()
 
-    # Watchlist
     st.markdown("##### 📜 Your Watchlist")
     
     for i, rule in enumerate(st.session_state.rules):
         data = get_stock_data(rule['symbol'])
         
         st.markdown(f'<div class="custom-card" style="padding: 1rem;">', unsafe_allow_html=True)
-        
-        cols = st.columns([0.5, 1, 1, 2, 1, 1])
+        # Logo | Symbol | Price | Vol | Range | Status | Actions
+        cols = st.columns([0.5, 1, 1, 1, 1.5, 1, 1])
         
         if data:
             price = data['price']
+            vol = data['volume']
+            # תאימות לאחור
+            target_vol = rule.get('min_vol', 0)
             
             # 1. Logo
             cols[0].markdown(f'<img src="{data["logo"]}" class="stock-logo">', unsafe_allow_html=True)
-            
             # 2. Symbol
             cols[1].markdown(f"**{rule['symbol']}**")
-            
             # 3. Price
             cols[2].write(f"${price}")
+            # 4. Volume (New!)
+            cols[3].caption(f"Vol: {vol/1000000:.1f}M")
+            # 5. Range
+            cols[4].write(f"${rule['min']} ➝ ${rule['max']}")
             
-            # 4. Range
-            cols[3].write(f"${rule['min']} ➝ ${rule['max']}")
+            # 6. Status Logic (Price AND Volume)
+            price_in_range = rule['min'] <= price <= rule['max']
+            vol_ok = vol >= target_vol
             
-            # 5. Status Badge & Alert Logic
-            in_range = rule['min'] <= price <= rule['max']
-            badge_class, badge_text = ("bg-green", "IN RANGE") if in_range else ("bg-red", "OUT")
-            cols[4].markdown(f'<span class="badge {badge_class}">{badge_text}</span>', unsafe_allow_html=True)
-            
-            if in_range:
-                last_alert = rule.get('last_alert')
-                should_alert = False
+            if price_in_range and vol_ok:
+                badge = ("bg-green", "IN RANGE")
+                should_check_alert = True
+            elif price_in_range and not vol_ok:
+                badge = ("bg-yellow", "LOW VOL")
+                should_check_alert = False
+            else:
+                badge = ("bg-red", "OUT")
+                should_check_alert = False
                 
-                if not last_alert: 
-                    should_alert = True
+            cols[5].markdown(f'<span class="badge {badge[0]}">{badge[1]}</span>', unsafe_allow_html=True)
+            
+            # Alert Trigger
+            if should_check_alert:
+                last_alert = rule.get('last_alert')
+                send_now = False
+                if not last_alert: send_now = True
                 else:
                     try:
-                        time_diff = (datetime.now() - datetime.fromisoformat(last_alert)).seconds
-                        if time_diff > 3600: should_alert = True
-                    except: should_alert = True
+                        if (datetime.now() - datetime.fromisoformat(last_alert)).seconds > 3600: send_now = True
+                    except: send_now = True
                 
-                if should_alert:
-                    # כאן נקראת הפונקציה החדשה
+                if send_now:
                     email_sent = send_html_email(
                         st.session_state.user['email'], 
-                        rule['symbol'], price, rule['min'], rule['max']
+                        rule['symbol'], price, vol, rule['min'], rule['max'], target_vol
                     )
-                    
                     wa_sent = False
                     if whatsapp_num:
-                        wa_sent = send_whatsapp(whatsapp_num, rule['symbol'], price, rule['min'], rule['max'])
+                        wa_sent = send_whatsapp(whatsapp_num, rule['symbol'], price, vol, rule['min'], rule['max'])
                     
                     if email_sent or wa_sent:
                         rule['last_alert'] = datetime.now().isoformat()
                         st.toast(f"🚨 Alert Sent for {rule['symbol']}!", icon="📧")
 
-            # 6. Actions
-            with cols[5]:
-                col_edit, col_del = st.columns(2)
-                if col_edit.button("✏️", key=f"edit_{i}"):
-                    edit_dialog(i, rule)
-                if col_del.button("🗑️", key=f"del_{i}"):
-                    st.session_state.rules.pop(i)
-                    st.rerun()
+            # 7. Actions
+            with cols[6]:
+                ce, cd = st.columns(2)
+                if ce.button("✏️", key=f"e_{i}"): edit_dialog(i, rule)
+                if cd.button("🗑️", key=f"d_{i}"): st.session_state.rules.pop(i); st.rerun()
         
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Add New
     with st.expander("➕ Add Stock"):
         with st.form("new_stock"):
-            c1, c2, c3 = st.columns(3)
+            c1, c2, c3, c4 = st.columns(4)
             s = c1.text_input("Symbol", "TSLA")
-            mn = c2.number_input("Min", 100.0)
-            mx = c3.number_input("Max", 300.0)
+            mn = c2.number_input("Min Price", 100.0)
+            mx = c3.number_input("Max Price", 300.0)
+            mv = c4.number_input("Min Volume", value=1000000)
             if st.form_submit_button("Add"):
                 if s:
-                    st.session_state.rules.append({'symbol': s.upper(), 'min': mn, 'max': mx})
+                    st.session_state.rules.append({'symbol': s.upper(), 'min': mn, 'max': mx, 'min_vol': mv})
                     st.rerun()
