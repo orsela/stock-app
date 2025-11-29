@@ -1,4 +1,4 @@
-"""Stock Alerts v5.1 - Fixed HTML Rendering"""
+"""Stock Alerts v5.2 - Fixed Syntax & Stability"""
 import streamlit as st
 import json, os, hashlib, time
 import yfinance as yf
@@ -15,9 +15,12 @@ if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
 
 def toggle_theme():
-    st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
+    if st.session_state.theme == 'dark':
+        st.session_state.theme = 'light'
+    else:
+        st.session_state.theme = 'dark'
 
-# הגדרת צבעים
+# הגדרת משתנים לפי הטים
 if st.session_state.theme == 'dark':
     BG_COLOR = "#0e1117"
     CARD_BG = "#1e293b"
@@ -31,7 +34,8 @@ else:
     BTN_ICON = "🌙"
     BORDER_COLOR = "#e0e0e0"
 
-# CSS מתוקן ומהודק
+# CSS - שימוש בפורמט בטוח למניעת שגיאות
+# שימו לב: בסוגריים מסולסלים כפולים {{ }} בתוך f-string
 st.markdown(f"""
 <style>
     .stApp {{
@@ -51,28 +55,243 @@ st.markdown(f"""
         margin: 2rem auto;
     }}
     
-    /* Headers */
-    .login-header {{
-        color: {TEXT_COLOR};
-        font-family: sans-serif;
-        font-weight: 700;
-        margin-top: 10px;
-        font-size: 1.5rem;
-    }}
-    
-    .login-sub {{
-        color: {TEXT_COLOR};
-        opacity: 0.7;
-        margin-bottom: 20px;
-        font-size: 0.9rem;
+    h1, h2, h3, p, div, span {{
+        color: {TEXT_COLOR} !important;
     }}
 
-    /* Google Button Fake */
-    .google-btn-link {{
-        text-decoration: none; 
-    }}
-    
-    .google-btn-style {{
+    /* Google Button Style */
+    .google-container {{
+        background-color: white;
+        border: 1px solid #dadce0;
+        border-radius: 20px;
+        padding: 10px;
+        margin-bottom: 20px;
+        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
+    }}
+    
+    .google-text {{
+        color: #3c4043 !important;
+        font-weight: 500;
+        text-decoration: none;
+        margin-left: 10px;
+    }}
+    
+    /* Separator */
+    .separator {{
+        display: flex;
+        align-items: center;
+        text-align: center;
+        margin: 20px 0;
+        opacity: 0.5;
+    }}
+    
+    .line {{
+        flex: 1;
+        height: 1px;
+        background-color: {TEXT_COLOR};
+    }}
+    
+    .or-text {{
+        padding: 0 10px;
+        font-size: 12px;
+    }}
+</style>
+""", unsafe_allow_html=True)
+
+# ==========================================
+#              לוגיקה (Backend)
+# ==========================================
+
+USERS_FILE = "users.json"
+RULES_FILE = "rules.json"
+
+def load_users():
+    return json.load(open(USERS_FILE)) if os.path.exists(USERS_FILE) else {}
+
+def save_users(users):
+    with open(USERS_FILE, 'w') as f: json.dump(users, f, indent=2)
+
+def login_user(email, pw):
+    users = load_users()
+    if email in users and users[email]['password'] == hashlib.sha256(pw.encode()).hexdigest():
+        return users[email]
+    return None
+
+def register_user(email, pw):
+    users = load_users()
+    if email in users: return False
+    users[email] = {'password': hashlib.sha256(pw.encode()).hexdigest(), 'created': datetime.now().isoformat()}
+    save_users(users)
+    return True
+
+def send_whatsapp(phone, symbol, price, min_p, max_p):
+    try:
+        # Check if secrets exist
+        if "twilio" not in st.secrets:
+            return False
+            
+        sid = st.secrets["twilio"]["account_sid"]
+        token = st.secrets["twilio"]["auth_token"]
+        from_num = st.secrets["twilio"]["from_number"]
+        
+        if not sid or not token:
+            return False
+            
+        from twilio.rest import Client
+        client = Client(sid, token)
+        
+        msg_body = f"🚀 *Stock Alert*\n\n📈 *{symbol}*\n💰 Price: ${price}\n🎯 Range: ${min_p} - ${max_p}"
+        
+        client.messages.create(
+            body=msg_body,
+            from_=f'whatsapp:{from_num}',
+            to=f'whatsapp:{phone}'
+        )
+        return True
+    except Exception as e:
+        print(f"Twilio Error: {e}")
+        return False
+
+@st.cache_data(ttl=60)
+def get_stock_data(symbol):
+    try:
+        ticker = yf.Ticker(symbol)
+        info = ticker.info
+        price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
+        return {'price': round(price, 2)} if price else None
+    except: return None
+
+# Session State Init
+if 'user' not in st.session_state: st.session_state.user = None
+if 'rules' not in st.session_state: st.session_state.rules = []
+
+# ==========================================
+#              UI - מסך כניסה
+# ==========================================
+
+if st.session_state.user is None:
+    # כרטיס מעוצב ב-HTML טהור
+    st.markdown(f"""
+    <div class="login-container">
+        <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="60">
+        <h2 style="margin-top:10px;">Welcome to StockWatcher</h2>
+        <p style="opacity:0.7; margin-bottom:20px;">Sign in to monitor your portfolio</p>
+        
+        <div class="google-container">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="18">
+            <span class="google-text">Continue with Google</span>
+        </div>
+        
+        <div class="separator">
+            <div class="line"></div>
+            <div class="or-text">OR</div>
+            <div class="line"></div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # טפסי הכניסה מוזרקים מתחת ל-HTML
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
+        
+        with tab_login:
+            with st.form("login_form"):
+                email = st.text_input("Email")
+                password = st.text_input("Password", type="password")
+                if st.form_submit_button("Sign In", use_container_width=True):
+                    user = login_user(email, password)
+                    if user:
+                        st.session_state.user = {'email': email}
+                        st.rerun()
+                    else: st.error("Login failed")
+        
+        with tab_signup:
+            with st.form("signup_form"):
+                new_email = st.text_input("Email")
+                new_pass = st.text_input("Password", type="password")
+                if st.form_submit_button("Create Account", use_container_width=True):
+                    if register_user(new_email, new_pass):
+                        st.success("Created! Please Login.")
+                    else: st.error("User exists")
+
+# ==========================================
+#              UI - דשבורד ראשי
+# ==========================================
+else:
+    # Header
+    top_col1, top_col2 = st.columns([8, 1])
+    with top_col1:
+        st.markdown(f"### 👋 Hello, {st.session_state.user['email']}")
+    with top_col2:
+        if st.button(BTN_ICON, help="Switch Theme"):
+            toggle_theme()
+            st.rerun()
+            
+    st.divider()
+
+    # Sidebar
+    with st.sidebar:
+        st.markdown("### Settings")
+        whatsapp_num = st.text_input("WhatsApp Number", placeholder="+97250...", key="wa_num")
+        st.caption("Required for alerts. Format: +972...")
+        
+        if st.button("Logout", type="primary"):
+            st.session_state.user = None
+            st.rerun()
+
+    # Watchlist
+    st.subheader("Your Watchlist")
+    
+    # הצגת התראות
+    for i, rule in enumerate(st.session_state.rules):
+        data = get_stock_data(rule['symbol'])
+        if data:
+            price = data['price']
+            
+            # Logic
+            status_color = "🟢"
+            if price < rule['min'] or price > rule['max']:
+                status_color = "🔴"
+                
+                # Cooldown & Alert Logic
+                last_alert = rule.get('last_alert')
+                should_alert = False
+                if not last_alert: should_alert = True
+                else:
+                    try:
+                        time_diff = (datetime.now() - datetime.fromisoformat(last_alert)).seconds
+                        if time_diff > 3600: should_alert = True
+                    except: should_alert = True
+                
+                if should_alert and whatsapp_num:
+                    if send_whatsapp(whatsapp_num, rule['symbol'], price, rule['min'], rule['max']):
+                        rule['last_alert'] = datetime.now().isoformat()
+            
+            # Row Display
+            with st.container():
+                c1, c2, c3, c4, c5 = st.columns([1, 1, 2, 1, 1])
+                c1.markdown(f"**{rule['symbol']}**")
+                c2.write(f"${price}")
+                # תיקון תצוגת טווח (מספרים משמאל לימין)
+                c3.markdown(f"${rule['min']} ➝ ${rule['max']}") 
+                c4.write(status_color)
+                if c5.button("🗑️", key=f"del_{i}"):
+                    st.session_state.rules.pop(i)
+                    st.rerun()
+            st.markdown("---")
+
+    # Add New
+    with st.expander("➕ Add New Alert"):
+        with st.form("add_new"):
+            c_sym, c_min, c_max = st.columns(3)
+            sym = c_sym.text_input("Symbol (e.g. TSLA)")
+            mi = c_min.number_input("Min Price", value=100.0)
+            ma = c_max.number_input("Max Price", value=200.0)
+            if st.form_submit_button("Add Watcher"):
+                if sym:
+                    st.session_state.rules.append({'symbol': sym.upper(), 'min': mi, 'max': ma})
+                    st.rerun()
