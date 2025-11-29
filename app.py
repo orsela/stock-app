@@ -1,4 +1,4 @@
-"""Stock Alerts v7.5 - DEMO DAY FINAL (Auto-Headers & Crash Proof)"""
+"""Stock Alerts v7.6 - Final Polish (Edit + Toggle + Phone Input)"""
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -16,55 +16,81 @@ st.set_page_config(page_title="StockWatcher", page_icon="📈", layout="wide")
 
 ADMIN_EMAIL = "orsela@gmail.com"
 
-# --- Theme Management ---
+# ==========================================
+#              ניהול THEME (Toggle)
+# ==========================================
+# שימוש ב-Toggle במקום כפתור
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
 
-def toggle_theme():
-    st.session_state.theme = 'light' if st.session_state.theme == 'dark' else 'dark'
+# פונקציית עזר לקביעת הצבעים
+def get_theme_colors(theme_mode):
+    if theme_mode == 'dark':
+        return "#0e1117", "#1e293b", "#ffffff", "#333333", "#262730"
+    else:
+        return "#ffffff", "#f0f2f6", "#000000", "#d1d5db", "#ffffff"
 
-if st.session_state.theme == 'dark':
-    BG_MAIN, BG_CARD, TEXT_MAIN, BTN_ICON, BORDER, INPUT_BG = "#0e1117", "#1e293b", "#ffffff", "☀️", "#333333", "#262730"
-else:
-    BG_MAIN, BG_CARD, TEXT_MAIN, BTN_ICON, BORDER, INPUT_BG = "#ffffff", "#f0f2f6", "#000000", "🌙", "#d1d5db", "#ffffff"
+BG_MAIN, BG_CARD, TEXT_MAIN, BORDER, INPUT_BG = get_theme_colors(st.session_state.theme)
 
+# CSS מתוקן לכפתורים שנעלמים
 st.markdown(f"""
 <style>
     .stApp {{ background-color: {BG_MAIN}; }}
     h1, h2, h3, h4, h5, h6, p, label, span, div {{ color: {TEXT_MAIN} !important; }}
+    
+    /* תיקון שדות קלט */
     .stTextInput input, .stNumberInput input {{
         color: {TEXT_MAIN} !important;
         background-color: {INPUT_BG} !important;
         border-color: {BORDER} !important;
     }}
+    
+    /* כרטיסים */
     .custom-card {{
         background-color: {BG_CARD};
         padding: 1.5rem;
         border-radius: 12px;
         border: 1px solid {BORDER};
         margin-bottom: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }}
+    
+    /* תיקון כפתור Sign In שלא רואים טקסט */
+    div.stButton > button:first-child {{
+        background-color: #ff4b4b;
+        color: white !important;
+        border: none;
+        font-weight: bold;
+    }}
+    div.stButton > button:hover {{
+        background-color: #ff6b6b;
+        color: white !important;
+    }}
+
+    /* כפתורים משניים (כמו עריכה/מחיקה) */
+    button[kind="secondary"] {{
+        background-color: transparent !important;
+        border: 1px solid {BORDER} !important;
+        color: {TEXT_MAIN} !important;
+    }}
+
     .badge {{
         padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; color: white !important; display: inline-block;
     }}
     .bg-green {{background-color: #28a745;}}
     .bg-yellow {{background-color: #ffc107; color: black !important;}}
     .bg-red {{background-color: #dc3545;}}
+    
     .stock-logo {{
         width: 35px; height: 35px; border-radius: 50%; object-fit: contain;
         background-color: #fff; padding: 2px; border: 1px solid #ccc;
     }}
-    div[data-testid="metric-container"] {{
-        background-color: {BG_CARD};
-        border: 1px solid {BORDER};
-        padding: 10px;
-        border-radius: 8px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }}
 </style>
 """, unsafe_allow_html=True)
 
-# --- Google Sheets Connection ---
+# ==========================================
+#              GOOGLE SHEETS DB
+# ==========================================
 @st.cache_resource
 def init_connection():
     try:
@@ -78,38 +104,11 @@ def init_connection():
 
 def get_db():
     client = init_connection()
-    if not client:
-        st.error("⚠️ Connection Failed. Check Secrets.")
-        return None
-    try:
-        # פתיחת הגיליון
-        sheet = client.open("StockWatcherDB")
-        
-        # --- בדיקת תקינות כותרות (Self-Healing) ---
-        # מוודא שטאב users קיים ויש לו כותרות
-        try:
-            ws_users = sheet.worksheet("users")
-            if not ws_users.row_values(1):
-                ws_users.append_row(["email", "password", "created_at"])
-        except:
-            ws_users = sheet.add_worksheet("users", 1000, 3)
-            ws_users.append_row(["email", "password", "created_at"])
+    if not client: return None
+    try: return client.open("StockWatcherDB")
+    except: return None
 
-        # מוודא שטאב rules קיים ויש לו כותרות
-        try:
-            ws_rules = sheet.worksheet("rules")
-            if not ws_rules.row_values(1):
-                ws_rules.append_row(["user_email", "symbol", "min_price", "max_price", "min_vol", "last_alert"])
-        except:
-            ws_rules = sheet.add_worksheet("rules", 1000, 6)
-            ws_rules.append_row(["user_email", "symbol", "min_price", "max_price", "min_vol", "last_alert"])
-            
-        return sheet
-    except:
-        st.error("⚠️ Database 'StockWatcherDB' not found.")
-        return None
-
-# --- Logic ---
+# --- User Logic ---
 def login_user(email, pw):
     try:
         sh = get_db()
@@ -135,12 +134,12 @@ def register_user(email, pw):
         return True
     except: return False
 
+# --- Rules Logic ---
 def load_rules(email):
     try:
         sh = get_db()
         if not sh: return []
         records = sh.worksheet("rules").get_all_records()
-        # שימוש ב-get כדי למנוע קריסה אם המפתח חסר
         return [r for r in records if str(r.get('user_email', '')).strip().lower() == email.strip().lower()]
     except: return []
 
@@ -163,6 +162,18 @@ def delete_rule(email, symbol):
             ws.update([['user_email', 'symbol', 'min_price', 'max_price', 'min_vol', 'last_alert']])
     except: pass
 
+def update_rule(email, symbol, new_min, new_max, new_vol):
+    try:
+        sh = get_db()
+        ws = sh.worksheet("rules")
+        # פתרון חכם לעדכון: מציאת התא לפי סימול ומייל
+        # (בשיטה פשוטה לדמו: מוחקים ויוצרים מחדש, זה הכי בטוח למניעת באגים בדמו)
+        delete_rule(email, symbol)
+        # הוספה עם השדות המעודכנים (מאפס את ההתראה האחרונה שזה טוב)
+        ws.append_row([email, symbol, new_min, new_max, new_vol, ""])
+        return True
+    except: return False
+
 def update_last_alert(email, symbol):
     try:
         sh = get_db()
@@ -171,7 +182,9 @@ def update_last_alert(email, symbol):
         if cell: ws.update_cell(cell.row, 6, datetime.now().isoformat())
     except: pass
 
-# --- Notifications ---
+# ==========================================
+#              EMAIL & DATA
+# ==========================================
 def send_email(to_email, symbol, price, vol, mn, mx):
     try:
         if "email" not in st.secrets: return False
@@ -201,6 +214,20 @@ def send_email(to_email, symbol, price, vol, mn, mx):
         return True
     except: return False
 
+def send_whatsapp(phone, symbol, price, vol, mn, mx):
+    try:
+        if "twilio" not in st.secrets: return False
+        sid = st.secrets["twilio"]["account_sid"]
+        token = st.secrets["twilio"]["auth_token"]
+        from_num = st.secrets["twilio"]["from_number"]
+        if not sid: return False
+        from twilio.rest import Client
+        client = Client(sid, token)
+        msg = f"🚀 {symbol}\n💰 ${price}\n🎯 ${min_p}-${max_p}"
+        client.messages.create(body=msg, from_=f'whatsapp:{from_num}', to=f'whatsapp:{phone}')
+        return True
+    except: return False
+
 @st.cache_data(ttl=60)
 def get_data(symbol):
     try:
@@ -209,32 +236,36 @@ def get_data(symbol):
         prev = i.get('previousClose')
         if not p: return None
         v = i.get('volume', 0)
-        
         change = 0.0
-        if p and prev:
-            change = ((p - prev) / prev) * 100
-            
+        if p and prev: change = ((p - prev) / prev) * 100
         dom = i.get('website', '').replace('https://','').replace('www.','').split('/')[0]
         logo = f"https://logo.clearbit.com/{dom}" if dom else "https://cdn-icons-png.flaticon.com/512/666/666201.png"
         return {'price': round(p,2), 'change': round(change, 2), 'volume': v, 'logo': logo}
     except: return None
 
 # ==========================================
-#              ADMIN PANEL
+#              DIALOGS (עריכה)
 # ==========================================
-def admin_panel():
-    st.markdown("## 🛡️ Admin Panel")
-    sh = get_db()
-    if sh:
-        try:
-            col1, col2 = st.columns(2)
-            with col1:
-                st.markdown("### Users")
-                st.dataframe(pd.DataFrame(sh.worksheet("users").get_all_records()))
-            with col2:
-                st.markdown("### Alerts")
-                st.dataframe(pd.DataFrame(sh.worksheet("rules").get_all_records()))
-        except: st.error("Empty DB or Connection Error")
+@st.dialog("Edit Alert ✏️")
+def edit_dialog(current_rule, user_email):
+    st.write(f"Editing **{current_rule['symbol']}**")
+    
+    # טעינת נתונים קיימים
+    try:
+        old_min = float(current_rule.get('min_price', 0))
+        old_max = float(current_rule.get('max_price', 0))
+        old_vol = float(current_rule.get('min_vol', 1000000))
+    except:
+        old_min, old_max, old_vol = 0.0, 0.0, 1000000.0
+
+    c1, c2 = st.columns(2)
+    new_min = c1.number_input("Min Price", value=old_min)
+    new_max = c2.number_input("Max Price", value=old_max)
+    new_vol = st.number_input("Min Volume", value=old_vol, step=100000.0)
+    
+    if st.button("Save Changes", type="primary"):
+        update_rule(user_email, current_rule['symbol'], new_min, new_max, new_vol)
+        st.rerun()
 
 # ==========================================
 #              MAIN APP FLOW
@@ -242,11 +273,11 @@ def admin_panel():
 
 if 'user' not in st.session_state: st.session_state.user = None
 
+# --- LOGIN ---
 if st.session_state.user is None:
-    # Login View
     st.markdown("""<div style="display:flex;justify-content:center;margin-top:50px;">
     <div class="custom-card" style="width:400px;text-align:center;">
-    <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="60">
+    <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="50">
     <h2>StockWatcher</h2><p>Login to continue</p></div></div>""", unsafe_allow_html=True)
     
     c1,c2,c3 = st.columns([1,1,1])
@@ -255,33 +286,56 @@ if st.session_state.user is None:
         with tab1:
             with st.form("l"):
                 e = st.text_input("Email"); p = st.text_input("Password", type="password")
-                if st.form_submit_button("Sign In", use_container_width=True):
+                if st.form_submit_button("Sign In"):
                     u = login_user(e, p)
                     if u: st.session_state.user = u; st.rerun()
                     else: st.error("Failed")
         with tab2:
             with st.form("r"):
                 e = st.text_input("Email"); p = st.text_input("Password", type="password")
-                if st.form_submit_button("Sign Up", use_container_width=True):
+                if st.form_submit_button("Sign Up"):
                     if register_user(e, p): st.success("Created!");
                     else: st.error("Error")
 
+# --- DASHBOARD ---
 else:
-    # Dashboard View
     u_email = str(st.session_state.user.get('email', 'User'))
     
-    # Admin Panel
-    if u_email.strip().lower() == ADMIN_EMAIL.lower():
-        with st.sidebar:
+    # Sidebar Setup (כולל וואטסאפ)
+    with st.sidebar:
+        st.header("Settings")
+        
+        # WhatsApp Input
+        st.markdown("📱 **WhatsApp Alerts**")
+        wa_num = st.text_input("Phone Number", placeholder="+972501234567", help="Format: +972...")
+        
+        st.divider()
+        if st.button("Logout"): st.session_state.user = None; st.rerun()
+        
+        # Admin
+        if u_email.strip().lower() == ADMIN_EMAIL.lower():
             st.divider()
             if st.checkbox("🛡️ Admin Panel"):
-                admin_panel()
+                st.markdown("## Admin Database View")
+                sh = get_db()
+                if sh:
+                    st.write("Users:"); st.dataframe(pd.DataFrame(sh.worksheet("users").get_all_records()))
+                    st.write("Alerts:"); st.dataframe(pd.DataFrame(sh.worksheet("rules").get_all_records()))
                 st.stop()
 
-    # Top Bar
-    c_head, c_btn = st.columns([9, 1])
+    # Top Bar (Toggle Switch)
+    c_head, c_tog = st.columns([8, 2])
     c_head.markdown(f"### Hello, {u_email}")
-    if c_btn.button(BTN_ICON): toggle_theme(); st.rerun()
+    
+    # מתג יום לילה
+    is_dark = st.toggle("🌙 Dark Mode", value=(st.session_state.theme == 'dark'))
+    if is_dark and st.session_state.theme != 'dark':
+        st.session_state.theme = 'dark'
+        st.rerun()
+    elif not is_dark and st.session_state.theme != 'light':
+        st.session_state.theme = 'light'
+        st.rerun()
+
     st.divider()
 
     # Market Ticker
@@ -304,7 +358,7 @@ else:
         d = get_data(r.get('symbol'))
         if d:
             st.markdown('<div class="custom-card" style="padding:1rem;">', unsafe_allow_html=True)
-            cols = st.columns([0.5, 1, 1, 1, 1.5, 1, 0.5])
+            cols = st.columns([0.5, 1, 1, 1, 1.5, 1, 1])
             
             # Safe Get
             sym = r.get('symbol', 'N/A')
@@ -325,6 +379,7 @@ else:
             
             cols[5].markdown(f'<span class="badge {status}">{txt}</span>', unsafe_allow_html=True)
             
+            # Alert Logic
             if status == "bg-green":
                 last = str(r.get('last_alert', ''))
                 send = False
@@ -335,27 +390,37 @@ else:
                     except: send = True
                 
                 if send:
-                    if send_email(u_email, sym, d['price'], d['volume'], mn, mx):
+                    # Email
+                    email_sent = send_email(u_email, sym, d['price'], d['volume'], mn, mx)
+                    # WhatsApp (אם הוזן)
+                    wa_sent = False
+                    if wa_num:
+                        wa_sent = send_whatsapp(wa_num, sym, d['price'], d['volume'], mn, mx)
+                        
+                    if email_sent or wa_sent:
                         update_last_alert(u_email, sym)
                         st.toast(f"Alert Sent: {sym}", icon="🚀")
 
-            if cols[6].button("🗑️", key=f"del_{sym}"):
-                delete_rule(u_email, sym)
-                st.rerun()
+            # Actions Column (Edit / Delete)
+            with cols[6]:
+                ce, cd = st.columns(2)
+                if ce.button("✏️", key=f"ed_{sym}"):
+                    edit_dialog(r, u_email)
+                
+                if cd.button("🗑️", key=f"del_{sym}"):
+                    delete_rule(u_email, sym)
+                    st.rerun()
+                    
             st.markdown('</div>', unsafe_allow_html=True)
 
     with st.expander("➕ Add New Alert"):
         with st.form("new"):
             c1,c2,c3,c4 = st.columns(4)
             s = c1.text_input("Symbol")
-            mn = c2.number_input("Min", 100.0)
-            mx = c3.number_input("Max", 200.0)
+            mn = c2.number_input("Min $", 100.0)
+            mx = c3.number_input("Max $", 200.0)
             mv = c4.number_input("Min Vol", 1000000)
             if st.form_submit_button("Add Alert"):
                 if s:
                     add_rule(u_email, s.upper(), mn, mx, mv)
                     st.rerun()
-    
-    with st.sidebar:
-        st.divider()
-        if st.button("Logout", type="primary"): st.session_state.user = None; st.rerun()
