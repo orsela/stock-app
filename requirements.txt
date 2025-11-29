@@ -1,3 +1,5 @@
 streamlit
 yfinance
 twilio
+gspread
+oauth2client
