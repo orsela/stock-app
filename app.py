@@ -1,4 +1,4 @@
-"""Stock Alerts v7.8 - Registration with Phone Sync"""
+"""Stock Alerts v7.9 - Email Debug Mode (Shows Errors)"""
 import streamlit as st
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -17,7 +17,7 @@ st.set_page_config(page_title="StockWatcher", page_icon="📈", layout="wide")
 ADMIN_EMAIL = "orsela@gmail.com"
 
 # ==========================================
-#              ניהול THEME
+#              THEME
 # ==========================================
 if 'theme' not in st.session_state:
     st.session_state.theme = 'dark'
@@ -33,13 +33,11 @@ st.markdown(f"""
 <style>
     .stApp {{ background-color: {BG_MAIN}; }}
     h1, h2, h3, h4, h5, h6, p, label, span, div {{ color: {TEXT_MAIN} !important; }}
-    
     .stTextInput input, .stNumberInput input {{
         color: {TEXT_MAIN} !important;
         background-color: {INPUT_BG} !important;
         border-color: {BORDER} !important;
     }}
-    
     .custom-card {{
         background-color: {BG_CARD};
         padding: 1.5rem;
@@ -48,8 +46,6 @@ st.markdown(f"""
         margin-bottom: 10px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }}
-    
-    /* Login Button Fix */
     [data-testid="stFormSubmitButton"] > button {{
         background-color: #ff4b4b !important;
         color: white !important;
@@ -60,20 +56,17 @@ st.markdown(f"""
     [data-testid="stFormSubmitButton"] > button:hover {{
         background-color: #ff6b6b !important;
     }}
-
     button[kind="secondary"] {{
         background-color: transparent !important;
         border: 1px solid {BORDER} !important;
         color: {TEXT_MAIN} !important;
     }}
-
     .badge {{
         padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; color: white !important; display: inline-block;
     }}
     .bg-green {{background-color: #28a745;}}
     .bg-yellow {{background-color: #ffc107; color: black !important;}}
     .bg-red {{background-color: #dc3545;}}
-    
     .stock-logo {{
         width: 35px; height: 35px; border-radius: 50%; object-fit: contain;
         background-color: #fff; padding: 2px; border: 1px solid #ccc;
@@ -114,7 +107,6 @@ def login_user(email, pw):
         return None
     except: return None
 
-# פונקציית הרשמה מעודכנת - מקבלת טלפון
 def register_user(email, pw, phone):
     try:
         sh = get_db()
@@ -123,9 +115,7 @@ def register_user(email, pw, phone):
         try:
             if ws.find(email): return False
         except: pass
-        
         hashed_pw = hashlib.sha256(pw.encode()).hexdigest()
-        # שמירה עם 4 עמודות: אימייל, סיסמה, תאריך, טלפון
         ws.append_row([email, hashed_pw, datetime.now().isoformat(), phone])
         return True
     except: return False
@@ -176,11 +166,15 @@ def update_last_alert(email, symbol):
     except: pass
 
 # ==========================================
-#              EMAIL & DATA
+#              EMAIL & DATA (DEBUG MODE)
 # ==========================================
 def send_email(to_email, symbol, price, vol, mn, mx):
     try:
-        if "email" not in st.secrets: return False
+        # בדיקה 1: האם הסודות קיימים?
+        if "email" not in st.secrets:
+            st.error("❌ Secrets: [email] block missing!")
+            return False
+            
         sender = st.secrets["email"]["sender_email"]
         password = st.secrets["email"]["sender_password"]
         
@@ -202,10 +196,23 @@ def send_email(to_email, symbol, price, vol, mn, mx):
         msg['To'] = to_email
         msg.attach(MIMEText(html, 'html'))
         
+        # חיבור ל-SMTP
         s = smtplib.SMTP('smtp.gmail.com', 587)
-        s.starttls(); s.login(sender, password); s.send_message(msg); s.quit()
+        s.starttls()
+        # ניסיון התחברות
+        try:
+            s.login(sender, password)
+        except Exception as login_err:
+            st.error(f"❌ Gmail Login Failed: {login_err}")
+            return False
+            
+        s.send_message(msg)
+        s.quit()
         return True
-    except: return False
+        
+    except Exception as e:
+        st.error(f"❌ General Email Error: {e}")
+        return False
 
 def send_whatsapp(phone, symbol, price, vol, mn, mx):
     try:
@@ -285,12 +292,11 @@ if st.session_state.user is None:
                     if u: st.session_state.user = u; st.rerun()
                     else: st.error("Failed")
         
-        # טאב הרשמה מעודכן
+        # טאב הרשמה
         with tab2:
             with st.form("r"):
                 e = st.text_input("Email")
                 p = st.text_input("Password", type="password")
-                # שדה טלפון חדש
                 ph = st.text_input("WhatsApp Phone", placeholder="+97250...", help="For alerts")
                 
                 if st.form_submit_button("Sign Up"):
@@ -301,16 +307,12 @@ if st.session_state.user is None:
 # --- DASHBOARD ---
 else:
     u_email = str(st.session_state.user.get('email', 'User'))
-    
-    # טעינת הטלפון השמור מהגוגל שיטס
     saved_phone = str(st.session_state.user.get('phone', ''))
     
     # Sidebar
     with st.sidebar:
         st.header("Settings")
-        
-        # שדה טלפון - מוזן אוטומטית אם קיים ביוזר
-        wa_num = st.text_input("Phone Number", value=saved_phone, placeholder="+972...", help="Synced with account")
+        wa_num = st.text_input("Phone Number", value=saved_phone, placeholder="+972...")
         
         st.divider()
         if st.button("Logout"): st.session_state.user = None; st.rerun()
@@ -327,14 +329,11 @@ else:
     # Top Bar
     c_head, c_tog = st.columns([8, 2])
     c_head.markdown(f"### Hello, {u_email}")
-    
     is_dark = st.toggle("🌙 Dark Mode", value=(st.session_state.theme == 'dark'))
     if is_dark and st.session_state.theme != 'dark':
-        st.session_state.theme = 'dark'
-        st.rerun()
+        st.session_state.theme = 'dark'; st.rerun()
     elif not is_dark and st.session_state.theme != 'light':
-        st.session_state.theme = 'light'
-        st.rerun()
+        st.session_state.theme = 'light'; st.rerun()
 
     st.divider()
 
@@ -378,6 +377,7 @@ else:
             
             cols[5].markdown(f'<span class="badge {status}">{txt}</span>', unsafe_allow_html=True)
             
+            # Alert Logic with Debug
             if status == "bg-green":
                 last = str(r.get('last_alert', ''))
                 send = False
@@ -389,8 +389,8 @@ else:
                 
                 if send:
                     email_sent = send_email(u_email, sym, d['price'], d['volume'], mn, mx)
+                    
                     wa_sent = False
-                    # שימוש במספר מהסרגל או מהיוזר
                     final_phone = wa_num if wa_num else saved_phone
                     if final_phone:
                         wa_sent = send_whatsapp(final_phone, sym, d['price'], d['volume'], mn, mx)
@@ -401,12 +401,8 @@ else:
 
             with cols[6]:
                 ce, cd = st.columns(2)
-                if ce.button("✏️", key=f"ed_{sym}"):
-                    edit_dialog(r, u_email)
-                
-                if cd.button("🗑️", key=f"del_{sym}"):
-                    delete_rule(u_email, sym)
-                    st.rerun()
+                if ce.button("✏️", key=f"ed_{sym}"): edit_dialog(r, u_email)
+                if cd.button("🗑️", key=f"del_{sym}"): delete_rule(u_email, sym); st.rerun()
                     
             st.markdown('</div>', unsafe_allow_html=True)
 
