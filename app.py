@@ -364,4 +364,4 @@ else:
                 admin_panel()
                 st.stop()
 
-    c_head, c_btn = st.columns
+c_head, c_btn = st.columns([9, 1])
