@@ -1,4 +1,4 @@
-"""Stock Alerts v5.3 - Dashboard Returns!"""
+"""Stock Alerts v5.4 - Stock Logos + Glowing Badges"""
 import streamlit as st
 import json, os, hashlib, time
 import yfinance as yf
@@ -20,7 +20,7 @@ def toggle_theme():
     else:
         st.session_state.theme = 'dark'
 
-# הגדרת משתנים לפי הטים
+# הגדרת משתנים
 if st.session_state.theme == 'dark':
     BG_COLOR = "#0e1117"
     CARD_BG = "#1e293b"
@@ -34,7 +34,7 @@ else:
     BTN_ICON = "🌙"
     BORDER_COLOR = "#e0e0e0"
 
-# CSS
+# CSS - עיצוב מתקדם לכרטיסים ותגיות
 st.markdown(f"""
 <style>
     .stApp {{
@@ -58,45 +58,33 @@ st.markdown(f"""
         color: {TEXT_COLOR} !important;
     }}
     
-    /* מדדים למעלה */
-    div[data-testid="metric-container"] {{
-        background-color: {CARD_BG};
-        border: 1px solid {BORDER_COLOR};
-        padding: 10px;
-        border-radius: 10px;
-        text-align: center;
+    /* תגיות סטטוס זוהרות */
+    .status-badge {{
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-weight: bold;
+        font-size: 0.85em;
+        color: white !important;
+        display: inline-block;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }}
+    .badge-green {{
+        background-color: #00c853; /* ירוק בוהק */
+    }}
+    .badge-red {{
+        background-color: #d50000; /* אדום בוהק */
     }}
 
-    /* Google Button Fake */
-    .google-container {{
-        background-color: white;
-        border: 1px solid #dadce0;
-        border-radius: 20px;
-        padding: 10px;
-        margin-bottom: 20px;
-        cursor: not-allowed; /* מסמן שאי אפשר ללחוץ כרגע */
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0.7;
+    /* יישור תמונת לוגו */
+    .stock-logo {{
+        border-radius: 50%;
+        vertical-align: middle;
+        width: 30px;
+        height: 30px;
+        object-fit: contain;
+        background-color: white; /* רקע לבן ללוגו כדי שיראה טוב בחושך */
+        padding: 2px;
     }}
-    
-    .google-text {{
-        color: #3c4043 !important;
-        font-weight: 500;
-        margin-left: 10px;
-    }}
-    
-    .separator {{
-        display: flex;
-        align-items: center;
-        text-align: center;
-        margin: 20px 0;
-        opacity: 0.5;
-    }}
-    
-    .line {{flex: 1; height: 1px; background-color: {TEXT_COLOR};}}
-    .or-text {{padding: 0 10px; font-size: 12px;}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -125,23 +113,29 @@ def register_user(email, pw):
     save_users(users)
     return True
 
-# פונקציה משופרת שמחזירה גם אחוז שינוי (בשביל הדשבורד)
+# שליפת נתונים + לוגו
 @st.cache_data(ttl=60)
 def get_stock_data(symbol):
     try:
         ticker = yf.Ticker(symbol)
         info = ticker.info
         
-        # מחיר נוכחי
+        # מחירים
         price = info.get('currentPrice') or info.get('regularMarketPrice') or info.get('previousClose')
-        # מחיר סגירה קודם (לחישוב אחוזים)
         prev = info.get('previousClose')
         
+        # לוגו (נסיון לשלוף)
+        logo = info.get('logo_url', '')
+
+        change = 0.0
         if price and prev:
             change = ((price - prev) / prev) * 100
-            return {'price': round(price, 2), 'change': round(change, 2)}
             
-        return {'price': round(price, 2), 'change': 0.0} if price else None
+        return {
+            'price': round(price, 2), 
+            'change': round(change, 2),
+            'logo': logo
+        } if price else None
     except: return None
 
 # Session State
@@ -158,24 +152,12 @@ if st.session_state.user is None:
         <img src="https://cdn-icons-png.flaticon.com/512/2991/2991148.png" width="60">
         <h2 style="margin-top:10px;">Welcome to StockWatcher</h2>
         <p style="opacity:0.7; margin-bottom:20px;">Sign in to monitor your portfolio</p>
-        
-        <div class="google-container" title="Google Login requires API Keys configuration">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="18">
-            <span class="google-text">Login with Google (Demo)</span>
-        </div>
-        
-        <div class="separator">
-            <div class="line"></div>
-            <div class="or-text">OR EMAIL</div>
-            <div class="line"></div>
-        </div>
     </div>
     """, unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
         tab_login, tab_signup = st.tabs(["Login", "Sign Up"])
-        
         with tab_login:
             with st.form("login_form"):
                 email = st.text_input("Email")
@@ -186,7 +168,6 @@ if st.session_state.user is None:
                         st.session_state.user = {'email': email}
                         st.rerun()
                     else: st.error("Login failed")
-        
         with tab_signup:
             with st.form("signup_form"):
                 new_email = st.text_input("Email")
@@ -200,7 +181,7 @@ if st.session_state.user is None:
 #              UI - דשבורד ראשי
 # ==========================================
 else:
-    # 1. Header & Theme Toggle
+    # 1. Header
     top_col1, top_col2 = st.columns([8, 1])
     with top_col1:
         st.markdown(f"### 👋 Hello, {st.session_state.user['email']}")
@@ -211,53 +192,69 @@ else:
             
     st.divider()
 
-    # 2. Market Overview (החזרנו את המדדים!)
+    # 2. Market Overview
     st.subheader("📊 Market Overview")
     m1, m2, m3 = st.columns(3)
     
-    # S&P 500
     sp_data = get_stock_data("^GSPC")
-    if sp_data: m1.metric("S&P 500", f"${sp_data['price']:,}", f"{sp_data['change']}%")
-    else: m1.metric("S&P 500", "Loading...", "0%")
+    val_sp = f"${sp_data['price']:,}" if sp_data else "Loading..."
+    delta_sp = f"{sp_data['change']}%" if sp_data else "0%"
+    m1.metric("S&P 500", val_sp, delta_sp)
     
-    # NASDAQ
     nd_data = get_stock_data("^IXIC")
-    if nd_data: m2.metric("NASDAQ", f"${nd_data['price']:,}", f"{nd_data['change']}%")
-    else: m2.metric("NASDAQ", "Loading...", "0%")
+    val_nd = f"${nd_data['price']:,}" if nd_data else "Loading..."
+    delta_nd = f"{nd_data['change']}%" if nd_data else "0%"
+    m2.metric("NASDAQ", val_nd, delta_nd)
     
-    # BITCOIN
     btc_data = get_stock_data("BTC-USD")
-    if btc_data: m3.metric("Bitcoin", f"${btc_data['price']:,}", f"{btc_data['change']}%")
-    else: m3.metric("Bitcoin", "Loading...", "0%")
+    val_btc = f"${btc_data['price']:,}" if btc_data else "Loading..."
+    delta_btc = f"{btc_data['change']}%" if btc_data else "0%"
+    m3.metric("Bitcoin", val_btc, delta_btc)
 
     st.divider()
 
     # 3. Sidebar
     with st.sidebar:
         st.markdown("### Settings")
-        whatsapp_num = st.text_input("WhatsApp Number", placeholder="+97250...", key="wa_num")
-        
         if st.button("Logout", type="primary"):
             st.session_state.user = None
             st.rerun()
 
-    # 4. Watchlist (המשך רגיל)
+    # 4. Watchlist
     st.subheader("Your Watchlist")
+    
     for i, rule in enumerate(st.session_state.rules):
         data = get_stock_data(rule['symbol'])
         if data:
             price = data['price']
             
-            # Status Logic
-            color = "🟢" if rule['min'] <= price <= rule['max'] else "🔴"
+            # בדיקת טווח וקביעת תגית
+            in_range = rule['min'] <= price <= rule['max']
+            if in_range:
+                badge_html = '<span class="status-badge badge-green">IN RANGE</span>'
+            else:
+                badge_html = '<span class="status-badge badge-red">OUT</span>'
             
+            # תצוגה
             with st.container():
-                c1, c2, c3, c4, c5 = st.columns([1, 1, 2, 1, 1])
-                c1.markdown(f"**{rule['symbol']}**")
-                c2.write(f"${price}")
-                c3.markdown(f"${rule['min']} ➝ ${rule['max']}")
-                c4.write(color)
-                if c5.button("🗑️", key=f"del_{i}"):
+                # חלוקה לעמודות: לוגו | שם | מחיר | טווח | סטטוס | מחיקה
+                c_logo, c_sym, c_price, c_range, c_status, c_del = st.columns([0.5, 1, 1, 2, 1, 0.5])
+                
+                # לוגו
+                with c_logo:
+                    if data['logo']:
+                        st.image(data['logo'], width=35)
+                    else:
+                        st.write("📈") # אייקון ברירת מחדל אם אין לוגו
+
+                c_sym.markdown(f"**{rule['symbol']}**")
+                c_price.write(f"${price}")
+                c_range.markdown(f"${rule['min']} ➝ ${rule['max']}")
+                
+                # הזרקת התגית המעוצבת
+                c_status.markdown(badge_html, unsafe_allow_html=True)
+                
+                if c_del.button("🗑️", key=f"del_{i}"):
                     st.session_state.rules.pop(i)
                     st.rerun()
             st.markdown("---")
