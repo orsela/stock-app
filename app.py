@@ -9,7 +9,7 @@ import hashlib
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. הגדרות מערכת ועיצוב (StockPulse Black Theme - Exact Match to Image)
+# 1. עיצוב ו-CSS (שחור, כפתורים כתומים, טאבים)
 # ==========================================
 st.set_page_config(page_title="StockPulse", layout="wide", page_icon="📈")
 
@@ -18,102 +18,68 @@ def apply_custom_css():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap');
         
-        /* --- Global Black Theme --- */
+        /* --- רקע כללי שחור --- */
         .stApp {
-            background-color: #000000; /* Absolute black background */
+            background-color: #000000;
             font-family: 'Roboto', sans-serif;
             color: #FFFFFF;
         }
         
-        /* --- Typography --- */
-        .main-title {
-            font-size: 4rem; /* Larger size */
-            font-weight: 900;
-            color: #FFFFFF; /* Solid white */
-            margin-bottom: 0px;
+        /* --- עיצוב הטאבים (Tabs) --- */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 20px;
+            margin-bottom: 20px;
         }
-        .sub-title {
+        .stTabs [data-baseweb="tab"] {
+            height: 50px;
+            white-space: pre-wrap;
+            background-color: transparent;
+            border-radius: 0px;
+            color: #888;
             font-size: 1.2rem;
-            color: #888; /* Gray text */
-            margin-top: -10px;
-            margin-bottom: 40px;
+            font-weight: 700;
+            border: none; /* ביטול גבולות ברירת מחדל */
         }
-        .input-label {
-            font-size: 1rem;
-            color: #888; /* Gray label */
-            margin-bottom: 5px;
+        .stTabs [aria-selected="true"] {
+            color: #FF7F50 !important;
+            border-bottom: 3px solid #FF7F50; /* קו תחתון מודגש יותר */
         }
         
-        /* --- Inputs (Light background, dark text) --- */
-        /* Target the input container */
+        /* --- שדות קלט (רקע בהיר, טקסט כהה) --- */
         div[data-testid="stTextInput"] > div > div {
-            background-color: #F0F2F6 !important; /* Light gray/white background */
+            background-color: #F0F2F6 !important;
             border-radius: 8px;
             border: none;
-            color: #333 !important; /* Dark text inside */
+            color: #333 !important;
         }
-        /* Target the input element itself */
         input[type="text"], input[type="password"] {
-            color: #333 !important; /* Dark text */
-            background-color: transparent !important;
+            color: #333 !important;
         }
-        /* Target placeholder text */
-        ::placeholder {
-            color: #888 !important; /* Gray placeholder */
-            opacity: 1;
-        }
-        /* Fix for password visibility icon container */
-        div[data-testid="stTextInput"] > div > div > div:last-child {
-             color: #333 !important; /* Dark icon color */
-        }
-
-        /* --- Buttons (Orange) --- */
+        
+        /* --- כפתורים (כתום) --- */
         div.stButton > button {
             background-color: #FF7F50; 
             color: white;
             border-radius: 8px;
             border: none;
-            padding: 12px 24px;
+            padding: 12px 0;
             font-weight: bold;
             font-size: 16px;
+            width: 100%;
             transition: 0.3s;
-            min-width: 120px;
+            margin-bottom: 10px; /* ריווח בין כפתורים אנכיים */
         }
         div.stButton > button:hover {
             background-color: #FF6347;
             box-shadow: 0px 0px 15px rgba(255, 127, 80, 0.5);
         }
         
-        /* --- Social Login Buttons (Orange Square-ish) --- */
-        .social-btn-container button {
-             background-color: #FF7F50 !important;
-             border: none !important;
-             color: white !important;
-             font-size: 1.5rem !important;
-             width: 60px !important;
-             height: 60px !important;
-             border-radius: 12px !important;
-             display: flex;
-             justify-content: center;
-             align-items: center;
-        }
-
-        /* --- Links & Dividers --- */
-        .forgot-password {
-            text-align: right;
-            font-size: 0.9rem;
-            color: #888;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        .divider-text {
-            text-align: center;
-            color: #888;
-            font-size: 0.9rem;
-            margin: 30px 0;
-        }
-
-        /* --- Hide Default Elements --- */
+        /* --- טקסטים וכותרות --- */
+        .main-title { font-size: 3.5rem; font-weight: 900; color: #fff; line-height: 1.1; }
+        .sub-title { font-size: 1.2rem; color: #888; margin-bottom: 30px; }
+        .divider-text { text-align: center; color: #888; font-size: 0.9rem; margin: 30px 0 20px 0; }
+        
+        /* הסתרת אלמנטים מיותרים */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
@@ -121,12 +87,12 @@ def apply_custom_css():
     """, unsafe_allow_html=True)
 
 # State Management
-if 'page' not in st.session_state: st.session_state['page'] = 'login'
+if 'page' not in st.session_state: st.session_state['page'] = 'auth'
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'user_email' not in st.session_state: st.session_state['user_email'] = None
 
 # ==========================================
-# 2. Backend Logic (Google Sheets & Auth)
+# 2. לוגיקה ו-DB (ללא שינוי)
 # ==========================================
 def get_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -182,7 +148,7 @@ def login_user(email, password):
     return False
 
 # ==========================================
-# 3. Market Data Engine
+# 3. נתוני שוק (ללא שינוי)
 # ==========================================
 @st.cache_data(ttl=60)
 def get_market_metrics():
@@ -217,9 +183,6 @@ def save_alert(ticker, min_p, max_p, vol, one_time):
         st.rerun()
     except Exception as e: st.error(f"Save Error: {e}")
 
-# ==========================================
-# 4. Helper UI Functions
-# ==========================================
 def navigate_to(page):
     st.session_state['page'] = page
     st.rerun()
@@ -227,106 +190,81 @@ def navigate_to(page):
 def show_chart(ticker):
     try:
         data = yf.Ticker(ticker).history(period="1mo")
-        fig = go.Figure(data=[go.Candlestick(x=data.index,
-                                open=data['Open'], high=data['High'],
-                                low=data['Low'], close=data['Close'])])
-        fig.update_layout(height=200, margin=dict(l=0, r=0, t=10, b=0),
-                          paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-                          xaxis_rangeslider_visible=False)
+        fig = go.Figure(data=[go.Candlestick(x=data.index, open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'])])
+        fig.update_layout(height=200, margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis_rangeslider_visible=False)
         st.plotly_chart(fig, use_container_width=True)
     except: st.caption("Chart unavailable")
 
 # ==========================================
-# 5. PAGE: LOGIN (MATCHING IMAGE)
+# 4. מסך התחברות והרשמה משולב (Split Screen)
 # ==========================================
-def login_page():
-    # Center the content
-    c1, c2, c3 = st.columns([1, 2, 1])
+def auth_page():
+    col_img, col_form = st.columns([1.5, 1])
     
-    with c2:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
+    with col_img:
+        try:
+            st.image("login_image.png", use_container_width=True)
+        except:
+            st.warning("Image 'login_image.png' not found.")
+
+    with col_form:
+        st.markdown("<br>", unsafe_allow_html=True)
         st.markdown('<div class="main-title">STOCKPULSE</div>', unsafe_allow_html=True)
         st.markdown('<div class="sub-title">Real-Time Market Alerts</div>', unsafe_allow_html=True)
         
-        st.markdown('<div class="input-label">Email Address</div>', unsafe_allow_html=True)
-        email = st.text_input("Email Address", placeholder="name@example.com", label_visibility="collapsed")
+        tab_login, tab_signup = st.tabs(["LOG IN", "SIGN UP"])
         
-        st.markdown('<div class="input-label" style="margin-top: 20px;">Password</div>', unsafe_allow_html=True)
-        password = st.text_input("Password", type="password", placeholder="••••••••", label_visibility="collapsed")
-        
-        st.markdown('<div class="forgot-password">Forgot Password?</div>', unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # Login Button
-        if st.button("LOG IN", use_container_width=True):
-            if login_user(email, password):
-                st.session_state.user_email = email
-                st.session_state.logged_in = True
-                navigate_to('dashboard')
-            else:
-                st.error("Invalid Credentials")
-
-        # Social Login Section
-        st.markdown('<div class="divider-text">— OR CONTINUE WITH —</div>', unsafe_allow_html=True)
-        
-        # Social Buttons (Orange, Square-ish, Centered)
-        sc1, sc2, sc3, sc4, sc5 = st.columns([1, 1, 1, 1, 1])
-        with sc2:
-            st.markdown('<div class="social-btn-container">', unsafe_allow_html=True)
-            st.button("G", key="g_login")
-            st.markdown('</div>', unsafe_allow_html=True)
-        with sc3:
-            st.markdown('<div class="social-btn-container">', unsafe_allow_html=True)
-            # Placeholder for Apple icon
-            st.button("", key="a_login") 
-            st.markdown('</div>', unsafe_allow_html=True)
-        with sc4:
-            st.markdown('<div class="social-btn-container">', unsafe_allow_html=True)
-            st.button("in", key="l_login")
-            st.markdown('</div>', unsafe_allow_html=True)
-
-# ==========================================
-# 6. PAGE: SIGN UP (UNCHANGED)
-# ==========================================
-def signup_page():
-    col1, col2 = st.columns([1, 1])
-    with col1:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.title("Join StockPulse")
-        st.markdown("### Get Alerts Directly to WhatsApp.")
-        st.markdown("Never miss a breakout again.")
-        
-    with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        with st.container(border=True):
-            st.subheader("Create Account")
-            new_email = st.text_input("Email Address")
-            new_pass = st.text_input("Create Password", type="password")
-            phone = st.text_input("WhatsApp Number", placeholder="+972...")
+        # --- TAB 1: LOG IN (מעודכן עם כפתורים חדשים) ---
+        with tab_login:
+            st.markdown("<br>", unsafe_allow_html=True)
+            l_email = st.text_input("Email Address", key="l_email")
+            l_pass = st.text_input("Password", type="password", key="l_pass")
             
-            if st.button("SIGN UP"):
-                if add_user_to_db(new_email, new_pass, phone):
-                    st.success("Created! Please Log In.")
-                    time.sleep(1.5)
-                    navigate_to('login')
-                
-            st.markdown("---")
-            if st.button("Back to Login", key="goto_login"):
-                navigate_to('login')
+            st.markdown('<div style="text-align:right; color:#888; font-size:0.9rem; cursor:pointer;">Forgot Password?</div>', unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            if st.button("LOG IN"):
+                if login_user(l_email, l_pass):
+                    st.session_state.user_email = l_email
+                    st.session_state.logged_in = True
+                    navigate_to('dashboard')
+                else:
+                    st.error("Invalid Credentials")
+            
+            # --- כפתורי סושיאל מעודכנים ---
+            st.markdown('<div class="divider-text">— OR CONTINUE WITH —</div>', unsafe_allow_html=True)
+            
+            # שימוש בכפתורים רחבים אחד מתחת לשני עם אימוג'י וטקסט ברור
+            # ה-CSS הקיים כבר דואג שהם יהיו כתומים ולרוחב מלא
+            st.button("🌐 Continue with Google", key="g_btn")
+            st.button("🍎 Continue with Apple", key="a_btn")
+            st.button("🔗 Continue with LinkedIn", key="l_btn")
 
+        # --- TAB 2: SIGN UP (ללא שינוי) ---
+        with tab_signup:
+            st.markdown("<br>", unsafe_allow_html=True)
+            s_email = st.text_input("New Email", key="s_email")
+            s_pass = st.text_input("Create Password", type="password", key="s_pass")
+            s_phone = st.text_input("WhatsApp Number", placeholder="+972...", key="s_phone")
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            if st.button("CREATE ACCOUNT"):
+                if add_user_to_db(s_email, s_pass, s_phone):
+                    st.success("Account created successfully!")
+                    time.sleep(1)
+                    st.balloons()
+            
 # ==========================================
-# 7. PAGE: DASHBOARD (UNCHANGED)
+# 5. PAGE: DASHBOARD (ללא שינוי)
 # ==========================================
 def dashboard_page():
-    # Header
     c1, c2 = st.columns([6, 1])
     with c1: st.title("Dashboard")
     with c2: 
         if st.button("Log Out"):
             st.session_state.logged_in = False
-            navigate_to('login')
+            navigate_to('auth')
             
-    # Metrics Bar
     metrics = get_market_metrics()
     m_cols = st.columns(4)
     keys = ["S&P 500", "NASDAQ", "Bitcoin", "VIX"]
@@ -343,10 +281,7 @@ def dashboard_page():
             """, unsafe_allow_html=True)
     st.markdown("---")
 
-    # Main Area
     col_setup, col_list = st.columns([1, 2])
-    
-    # Left: Alert Setup (Wheel/Slider)
     with col_setup:
         st.markdown("### 🔔 Create Alert")
         with st.container(border=True):
@@ -357,27 +292,21 @@ def dashboard_page():
                 st.caption(f"Current Price: ${curr_price:.2f}")
 
             st.markdown("<strong>Target Price</strong>", unsafe_allow_html=True)
-            # Slider Logic
             if 'slider_price' not in st.session_state: st.session_state.slider_price = curr_price
             input_val = st.number_input("Price Input", value=float(st.session_state.slider_price), label_visibility="collapsed")
-            
             s_min = float(curr_price) * 0.5
             s_max = float(curr_price) * 1.5
             if s_max == 0: s_max = 100
-            
             final_target = st.slider("Fine Tune", min_value=s_min, max_value=s_max, value=input_val)
-            
             st.markdown("---")
             min_vol = st.number_input("Min Volume (M)", value=5, step=1)
             st.caption("✅ Alert sends to WhatsApp")
-            
             if st.button("SET ALERT"):
                 if tick:
                     min_p = final_target if final_target < curr_price else ""
                     max_p = final_target if final_target > curr_price else ""
                     save_alert(tick, min_p, max_p, min_vol*1000000, True)
 
-    # Right: Watchlist
     with col_list:
         h1, h2 = st.columns([4, 1])
         with h1: st.markdown("### 📋 Active Watchlist")
@@ -411,7 +340,7 @@ def dashboard_page():
             except: st.error("DB Error")
 
 # ==========================================
-# 8. PAGE: ARCHIVE (UNCHANGED)
+# 6. PAGE: ARCHIVE (ללא שינוי)
 # ==========================================
 def archive_page():
     st.title("🗄️ Archive")
@@ -433,7 +362,7 @@ def archive_page():
         except: pass
 
 # ==========================================
-# 9. MAIN ROUTER
+# 7. MAIN ROUTER
 # ==========================================
 apply_custom_css()
 
@@ -441,5 +370,4 @@ if st.session_state.logged_in:
     if st.session_state['page'] == 'archive': archive_page()
     else: dashboard_page()
 else:
-    if st.session_state['page'] == 'signup': signup_page()
-    else: login_page()
+    auth_page()
