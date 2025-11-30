@@ -31,8 +31,14 @@ def apply_terminal_css():
 
         /* Typography */
         h1, h2, h3, h4, h5, h6, p, label, .stMetricLabel { color: #FFFFFF !important; opacity: 1 !important; }
+        
+        /* לוגו מרכזי (למסך כניסה) */
         .logo-title { font-size: 3rem; font-weight: 900; text-align: center; margin-bottom: 5px; letter-spacing: -1px; }
         .logo-subtitle { font-family: 'JetBrains Mono', monospace; color: #FF7F50; font-size: 1rem; text-align: center; margin-bottom: 30px; letter-spacing: 1px; }
+
+        /* לוגו לדשבורד (מיושר לשמאל) */
+        .dashboard-logo { font-size: 2.2rem; font-weight: 900; color: #FFFFFF; margin: 0; letter-spacing: -1px; line-height: 1; }
+        .dashboard-sub { font-family: 'JetBrains Mono', monospace; color: #FF7F50; font-size: 0.8rem; letter-spacing: 1px; }
 
         /* Inputs */
         .stTextInput > div > div > input, .stNumberInput > div > div > input {
@@ -238,6 +244,7 @@ def auth_page():
                 else: st.error("Error")
 
 def dashboard_page():
+    # Ticker Tape
     metrics = get_top_metrics()
     tape_html = ""
     for k, v in metrics.items():
@@ -245,14 +252,24 @@ def dashboard_page():
         tape_html += f'<div class="ticker-item">{k}: <span style="color:{color}">{v[0]:,.2f} ({v[1]:+.2f}%)</span></div>'
     st.markdown(f'<div class="ticker-wrap"><div class="ticker-move">{tape_html * 3}</div></div>', unsafe_allow_html=True)
 
+    # Header with LOGO instead of plain title
     c1, c2 = st.columns([8, 1])
-    with c1: st.title("MARKET DASHBOARD")
+    with c1:
+        st.markdown("""
+        <div>
+            <div class="dashboard-logo">STOCKPULSE</div>
+            <div class="dashboard-sub">LIVE TERMINAL</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
     with c2: 
+        st.markdown("<br>", unsafe_allow_html=True)
         if st.button("LOGOUT"):
             st.session_state.logged_in = False
             st.session_state.page = 'auth'
             st.rerun()
 
+    # Cards
     cols = st.columns(4)
     i = 0
     for k, v in metrics.items():
@@ -351,7 +368,6 @@ def dashboard_page():
                             for i, row in my_df.iterrows():
                                 sym = row['symbol']
                                 
-                                # מניעת השגיאה - חילוץ נתונים מופרד ומוגן
                                 t_max = safe_float(row.get('max_price'))
                                 t_min = safe_float(row.get('min_price'))
                                 target = t_max if t_max > 0 else t_min
