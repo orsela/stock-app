@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import yfinance as yf
 import hashlib
@@ -36,8 +36,8 @@ def apply_terminal_css():
         /* הסתרת אלמנטים מיותרים */
         #MainMenu, footer, header, .stDeployButton {visibility: hidden;}
 
-        /* --- TYPOGRAPHY (NO TRANSPARENCY) --- */
-        h1, h2, h3, h4, h5, h6, .stMarkdown, p {
+        /* --- TYPOGRAPHY --- */
+        h1, h2, h3, h4, h5, h6, .stMarkdown, p, label, .stMetricLabel {
             color: #FFFFFF !important;
             opacity: 1 !important;
         }
@@ -52,38 +52,33 @@ def apply_terminal_css():
         }
 
         /* --- INPUTS & SLIDERS --- */
-        /* שדות קלט עם רקע כהה וטקסט לבן בוהק */
         .stTextInput > div > div > input, .stNumberInput > div > div > input {
-            background-color: #1A1A1A !important;
-            border: 1px solid #444 !important;
+            background-color: #111 !important;
+            border: 1px solid #333 !important;
             color: #FFFFFF !important;
             font-family: 'JetBrains Mono', monospace !important;
             font-weight: 700;
+            font-size: 1.1rem;
         }
-        /* תוויות מעל שדות */
-        .stTextInput label, .stNumberInput label, .stSlider label {
-            color: #FFFFFF !important;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
+        
         /* --- BUTTONS --- */
         .stButton > button {
             background-color: #FF7F50 !important;
-            color: #000000 !important; /* טקסט שחור על כתום לקריאות */
+            color: #000000 !important;
             border: none !important;
             font-weight: 800 !important;
             border-radius: 4px !important;
             text-transform: uppercase;
+            font-size: 1rem;
         }
         .stButton > button:hover {
             background-color: #FF6347 !important;
+            transform: scale(1.02);
         }
 
         /* --- SOCIAL BUTTONS (SQUARES) --- */
-        /* Google */
         div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            background-color: #FFFFFF !important;
+            background: #FFFFFF !important;
             border-radius: 8px !important;
             background-image: -webkit-linear-gradient(45deg, #4285F4, #DB4437, #F4B400, #0F9D58) !important;
             -webkit-background-clip: text !important;
@@ -91,51 +86,57 @@ def apply_terminal_css():
             font-size: 26px !important; font-weight: 900 !important;
             height: 60px !important;
         }
-        /* Apple */
         div[data-testid="column"]:nth-of-type(3) div.stButton > button {
-            background-color: #FFFFFF !important;
-            color: #000 !important;
-            border-radius: 8px !important;
-            font-size: 26px !important;
+            background: #FFFFFF !important; color: #000 !important;
+            border-radius: 8px !important; font-size: 26px !important;
             height: 60px !important;
         }
-        /* LinkedIn */
         div[data-testid="column"]:nth-of-type(4) div.stButton > button {
-            background-color: #0077b5 !important;
-            color: #FFF !important;
-            border-radius: 8px !important;
-            font-size: 26px !important;
+            background: #0077b5 !important; color: #FFF !important;
+            border-radius: 8px !important; font-size: 26px !important;
             height: 60px !important;
         }
 
-        /* --- CARDS & METRICS --- */
-        .stock-data-box {
-            background-color: #111;
-            border: 1px solid #333;
-            padding: 15px;
-            border-radius: 6px;
-            margin-bottom: 15px;
+        /* --- TICKER TAPE --- */
+        .ticker-wrap {
+            width: 100%; overflow: hidden; background-color: #111;
+            border-bottom: 1px solid #333; padding: 10px 0; margin-bottom: 20px;
+            white-space: nowrap;
         }
-        .ma-badge {
-            background-color: #333;
-            color: #FF7F50;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-family: 'JetBrains Mono';
-            font-size: 0.8rem;
-            margin-left: 10px;
+        .ticker-move { display: inline-block; animation: ticker 35s linear infinite; }
+        .ticker-item { 
+            display: inline-block; padding: 0 2rem; 
+            font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #00FF00; 
+        }
+        @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
+
+        /* --- STOCK HEADER --- */
+        .stock-header {
+            font-size: 2.5rem; font-weight: 900; color: #FF7F50; margin: 0;
+        }
+        .stock-price-lg {
+            font-size: 2rem; font-family: 'JetBrains Mono'; font-weight: 700;
+        }
+
+        /* --- MA150 BADGE --- */
+        .ma-box {
+            background: #222; border: 1px solid #444; padding: 10px; border-radius: 5px;
+            text-align: center; margin-bottom: 10px;
         }
         </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# SESSION & AUTH
+# SESSION STATE INIT
 # ==========================================
 if 'page' not in st.session_state: st.session_state['page'] = 'auth'
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'user_email' not in st.session_state: st.session_state['user_email'] = None
+if 'target_price' not in st.session_state: st.session_state['target_price'] = 0.0
 
-# חיבור לגוגל שיטס
+# ==========================================
+# GOOGLE SHEETS & AUTH
+# ==========================================
 def get_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
@@ -162,10 +163,8 @@ def add_user_to_db(email, password, phone):
     if not sheet: return False
     try:
         df = pd.DataFrame(sheet.get_all_records())
-        if not df.empty and 'email' in df.columns:
-            if email in df['email'].values:
-                st.warning("משתמש קיים במערכת")
-                return False
+        if not df.empty and 'email' in df.columns and email in df['email'].values:
+            return False
     except: pass
     row = [email, make_hashes(password), str(datetime.now()), phone]
     try: sheet.append_row(row); return True
@@ -186,27 +185,44 @@ def login_user(email, password):
     return False
 
 # ==========================================
-# DATA LOGIC (WITH MA150)
+# MARKET DATA LOGIC
 # ==========================================
+@st.cache_data(ttl=30)
+def get_top_metrics():
+    """מביא נתונים לפס העליון"""
+    tickers = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "BTC": "BTC-USD", "VIX": "^VIX"}
+    data = {}
+    for name, symbol in tickers.items():
+        try:
+            t = yf.Ticker(symbol)
+            h = t.history(period="2d")
+            if len(h) >= 2:
+                curr = h['Close'].iloc[-1]
+                prev = h['Close'].iloc[-2]
+                chg = ((curr - prev) / prev) * 100
+                data[name] = (curr, chg)
+            else: data[name] = (0,0)
+        except: data[name] = (0,0)
+    return data
+
 @st.cache_data(ttl=60)
-def get_stock_data_full(symbol):
-    """שואב נתונים + היסטוריה לגרף + MA150"""
+def get_stock_analysis(symbol):
+    """ניתוח מעמיק למניה ספציפית כולל MA150"""
     try:
         t = yf.Ticker(symbol)
-        # שואבים שנה אחורה כדי שיהיה מספיק ל-150 יום
+        # משיכת היסטוריה של שנה לחישוב ממוצעים
         hist = t.history(period="1y")
-        
         if hist.empty: return None
         
-        current_price = hist['Close'].iloc[-1]
+        current = hist['Close'].iloc[-1]
         
         # חישוב MA150
         ma150 = 0.0
         if len(hist) >= 150:
             ma150 = hist['Close'].rolling(window=150).mean().iloc[-1]
-            
+        
         return {
-            "price": current_price,
+            "price": current,
             "ma150": ma150,
             "hist": hist,
             "symbol": symbol
@@ -216,7 +232,7 @@ def get_stock_data_full(symbol):
 def save_alert(ticker, min_p, max_p, vol, one_time):
     sheet = get_worksheet("Rules")
     if not sheet: 
-        st.error("שגיאת חיבור למסד נתונים")
+        st.error("DB Connection Failed")
         return
     row = [
         st.session_state.user_email, ticker, 
@@ -225,31 +241,26 @@ def save_alert(ticker, min_p, max_p, vol, one_time):
     ]
     try:
         sheet.append_row(row)
-        st.toast(f"התראה נוצרה עבור {ticker}", icon="✅")
+        st.toast(f"SAVED: {ticker}", icon="💾")
         time.sleep(1)
         st.rerun()
-    except Exception as e: st.error(f"Error: {e}")
+    except Exception as e: st.error(str(e))
 
-def navigate_to(page): st.session_state['page'] = page; st.rerun()
-
-# פונקציה לציור גרף
-def render_chart(hist_data, title):
-    fig = go.Figure(data=[go.Candlestick(x=hist_data.index,
-                open=hist_data['Open'], high=hist_data['High'],
-                low=hist_data['Low'], close=hist_data['Close'])])
+def render_chart(hist, title):
+    fig = go.Figure(data=[go.Candlestick(x=hist.index,
+                open=hist['Open'], high=hist['High'],
+                low=hist['Low'], close=hist['Close'])])
     fig.update_layout(
-        title=dict(text=title, font=dict(color="white")),
-        height=300, 
-        margin=dict(l=0, r=0, t=30, b=0), 
-        paper_bgcolor='#111', 
-        plot_bgcolor='#111', 
-        xaxis_rangeslider_visible=False,
-        font=dict(color="white")
+        title=dict(text=title, font=dict(color='white')),
+        height=350, margin=dict(l=0, r=0, t=30, b=0),
+        paper_bgcolor='#000', plot_bgcolor='#000',
+        font=dict(color='white'),
+        xaxis_rangeslider_visible=False
     )
     st.plotly_chart(fig, use_container_width=True)
 
 # ==========================================
-# AUTH PAGE
+# UI PAGES
 # ==========================================
 def auth_page():
     col_img, col_form = st.columns([1.5, 1])
@@ -258,185 +269,233 @@ def auth_page():
         except: st.warning("Missing login_image.png")
 
     with col_form:
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown('<div class="logo-title">STOCKPULSE</div>', unsafe_allow_html=True)
         st.markdown('<div class="logo-subtitle">TERMINAL ACCESS</div>', unsafe_allow_html=True)
         
         tab1, tab2 = st.tabs(["LOG IN", "SIGN UP"])
         
         with tab1:
-            email = st.text_input("EMAIL", key="l_e")
-            pwd = st.text_input("PASSWORD", type="password", key="l_p")
-            if st.button("LOG IN"):
-                if login_user(email, pwd):
-                    st.session_state.user_email = email
+            e = st.text_input("EMAIL", key="le")
+            p = st.text_input("PASSWORD", type="password", key="lp")
+            if st.button("AUTHENTICATE"):
+                if login_user(e, p):
+                    st.session_state.user_email = e
                     st.session_state.logged_in = True
-                    navigate_to('dashboard')
-                else: st.error("פרטים שגויים")
+                    st.session_state.page = 'dashboard'
+                    st.rerun()
+                else: st.error("Access Denied")
             
-            st.markdown('<div style="text-align:center; margin:20px 0; color:#888;">— OR —</div>', unsafe_allow_html=True)
-            c1, c2, c3, c4, c5 = st.columns([0.5, 1, 1, 1, 0.5])
-            with c2: st.button("G", key="g")
-            with c3: st.button("", key="a")
-            with c4: st.button("in", key="i")
+            st.markdown('<div class="divider-text">OR CONNECT WITH</div>', unsafe_allow_html=True)
+            c1, cg, ca, cl, c2 = st.columns([1, 1, 1, 1, 1])
+            with cg: st.button("G", key="g")
+            with ca: st.button("", key="a")
+            with cl: st.button("in", key="l")
 
         with tab2:
-            ne = st.text_input("EMAIL", key="s_e")
-            np = st.text_input("PASSWORD", type="password", key="s_p")
-            ph = st.text_input("WHATSAPP", key="s_ph")
-            if st.button("CREATE ACCOUNT"):
-                if add_user_to_db(ne, np, ph): st.success("נוצר בהצלחה")
-                else: st.error("שגיאה ביצירה")
+            ne = st.text_input("EMAIL", key="se")
+            np = st.text_input("PASSWORD", type="password", key="sp")
+            ph = st.text_input("WHATSAPP", key="sph")
+            if st.button("CREATE ID"):
+                if add_user_to_db(ne, np, ph): st.success("Created.")
+                else: st.error("Error")
 
-# ==========================================
-# DASHBOARD PAGE
-# ==========================================
 def dashboard_page():
-    # Header
+    # 1. Ticker Tape (HTML)
+    metrics = get_top_metrics()
+    tape_html = ""
+    for k, v in metrics.items():
+        color = "#00FF00" if v[1] >= 0 else "#FF0000"
+        tape_html += f'<div class="ticker-item">{k}: <span style="color:{color}">{v[0]:,.2f} ({v[1]:+.2f}%)</span></div>'
+    
+    st.markdown(f"""
+    <div class="ticker-wrap"><div class="ticker-move">{tape_html * 3}</div></div>
+    """, unsafe_allow_html=True)
+
+    # 2. Header & Logout
     c1, c2 = st.columns([8, 1])
     with c1: st.title("MARKET DASHBOARD")
     with c2: 
         if st.button("LOGOUT"):
             st.session_state.logged_in = False
-            navigate_to('auth')
+            st.session_state.page = 'auth'
+            st.rerun()
+
+    # 3. Top Cards
+    cols = st.columns(4)
+    i = 0
+    for k, v in metrics.items():
+        with cols[i]:
+            clr = "#10B981" if v[1] >= 0 else "#EF4444"
+            st.markdown(f"""
+            <div style="background:#111; padding:15px; border-radius:5px; text-align:center; border:1px solid #333;">
+                <div style="color:#888; font-size:0.8rem;">{k}</div>
+                <div style="font-family:'JetBrains Mono'; font-size:1.5rem; color:#fff;">{v[0]:,.2f}</div>
+                <div style="color:{clr}; font-weight:bold;">{v[1]:+.2f}%</div>
+            </div>
+            """, unsafe_allow_html=True)
+        i += 1
     st.markdown("---")
 
-    col_alert, col_list = st.columns([1, 1.5], gap="large")
+    # 4. Main Workspace
+    col_setup, col_list = st.columns([1.2, 1.8], gap="large")
 
-    # --- צד ימין: יצירת התראה (עם גרף ו-MA150) ---
-    with col_alert:
-        st.subheader("📟 Create Alert")
+    # --- SETUP (LEFT) ---
+    with col_setup:
+        st.markdown("### ⚡ QUICK ACTION")
         with st.container(border=True):
-            tick = st.text_input("SYMBOL", value="NVDA").upper()
+            symbol = st.text_input("SEARCH TICKER", value="NVDA").upper()
             
-            # משתני ברירת מחדל
-            current_p = 0.0
-            ma150_val = 0.0
+            # משתנים מקומיים
+            curr = 0.0
+            ma150 = 0.0
             
-            if tick:
-                data = get_stock_data_full(tick)
+            if symbol:
+                data = get_stock_analysis(symbol)
                 if data:
-                    current_p = data['price']
-                    ma150_val = data['ma150']
+                    curr = data['price']
+                    ma150 = data['ma150']
                     
-                    # הצגת נתונים בולטים
-                    m1, m2 = st.columns(2)
-                    with m1: st.metric("Current Price", f"${current_p:.2f}")
-                    with m2: 
-                        delta = current_p - ma150_val
-                        st.metric("MA 150", f"${ma150_val:.2f}", f"{delta:.2f} diff")
+                    # הצגת כותרת מניה + מחיר
+                    st.markdown(f"""
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h1 class="stock-header">{symbol}</h1>
+                        <span class="stock-price-lg">${curr:,.2f}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                    # הצגת גרף מידית למניה שנבחרה
-                    render_chart(data['hist'], f"{tick} Price Action")
+                    # הצגת MA150
+                    diff_ma = ((curr - ma150) / ma150) * 100 if ma150 else 0
+                    ma_color = "#10B981" if diff_ma > 0 else "#EF4444"
+                    st.markdown(f"""
+                    <div class="ma-box">
+                        <span style="color:#888;">MA 150:</span> 
+                        <span style="font-family:'JetBrains Mono'; color:#fff; font-size:1.2rem;">${ma150:,.2f}</span>
+                        <span style="color:{ma_color}; margin-left:10px;">({diff_ma:+.2f}%)</span>
+                    </div>
+                    """, unsafe_allow_html=True)
                     
-                else:
-                    st.error("Symbol not found")
+                    # גרף קטן
+                    render_chart(data['hist'], "")
+                    
+                    # אתחול מחיר יעד אם לא קיים
+                    if st.session_state.target_price == 0:
+                        st.session_state.target_price = curr
+                        
+                else: st.error("Ticker Not Found")
 
             st.markdown("---")
-            st.markdown("#### 🎯 Set Target Price")
-            
-            # --- לוגיקה חכמה לחיבור סליידר ואינפוט ---
-            # אם אין מחיר ב-session, נאתחל אותו למחיר הנוכחי
-            if 'target_price' not in st.session_state:
-                st.session_state.target_price = current_p
+            st.markdown("#### 🎯 SET TARGET")
 
-            # חישוב טווח דינמי לסליידר (כדי לא להגביל את המשתמש)
-            # הטווח יהיה בין 0 ל-פי 3 מהמחיר הנוכחי (או מהמחיר שהוקלד)
-            dynamic_max = max(float(current_p) * 3, float(st.session_state.target_price) * 2, 500.0)
+            # --- מנגנון סנכרון סליידר-אינפוט ---
             
-            # 1. קודם מציגים את האינפוט (לדיוק)
-            manual_input = st.number_input(
-                "Manual Input ($)", 
+            # חישוב גבולות לסליידר
+            s_min = 0.0
+            s_max = curr * 3 if curr > 0 else 1000.0
+            
+            # קולבקים (Callbacks) לעדכון הדדי
+            def update_from_input():
+                st.session_state.target_price = st.session_state.inp_val
+            
+            def update_from_slider():
+                st.session_state.target_price = st.session_state.sld_val
+
+            # קלט מספרי (Input)
+            st.number_input(
+                "MANUAL PRICE ($)", 
                 value=float(st.session_state.target_price),
                 step=0.5,
-                key="manual_input"
+                key="inp_val",
+                on_change=update_from_input
             )
             
-            # עדכון הסטייט אם האינפוט השתנה
-            if manual_input != st.session_state.target_price:
-                st.session_state.target_price = manual_input
-            
-            # 2. מציגים את הסליידר (Fine Tune) המחובר לאותו משתנה
-            slider_val = st.slider(
-                "Fine Tune Slider", 
-                min_value=0.0, 
-                max_value=dynamic_max, 
+            # סליידר (Slider)
+            st.slider(
+                "FINE TUNE",
+                min_value=s_min,
+                max_value=s_max,
                 value=float(st.session_state.target_price),
                 step=0.1,
-                key="slider_input"
+                key="sld_val",
+                on_change=update_from_slider
             )
             
-            # סנכרון דו-כיווני: אם הסליידר זז, הוא מעדכן את האינפוט בריצה הבאה
-            if slider_val != st.session_state.target_price:
-                 st.session_state.target_price = slider_val
-                 st.rerun() # רענון כדי שהאינפוט יתעדכן ויזואלית
-                 
-            st.markdown(f"Selected Target: **${st.session_state.target_price:.2f}**")
+            # תצוגה סופית
+            final_target = st.session_state.target_price
+            st.markdown(f"**ORDER PRICE:** <span style='color:#FF7F50; font-size:1.2rem; font-family:JetBrains Mono'>${final_target:.2f}</span>", unsafe_allow_html=True)
             
-            vol = st.number_input("Min Volume (M)", value=5, step=1)
+            vol = st.number_input("MIN VOL (M)", value=5, step=1)
             
             if st.button("ACTIVATE ALERT", use_container_width=True):
-                target = st.session_state.target_price
-                if tick and target > 0:
-                    min_p = target if target < current_p else 0
-                    max_p = target if target > current_p else 0
-                    save_alert(tick, min_p, max_p, vol*1000000, True)
+                if symbol and final_target > 0:
+                    min_p = final_target if final_target < curr else 0
+                    max_p = final_target if final_target > curr else 0
+                    save_alert(symbol, min_p, max_p, vol*1000000, True)
 
-    # --- צד שמאל: רשימת מעקב ---
+    # --- WATCHLIST (RIGHT) ---
     with col_list:
-        h_col1, h_col2 = st.columns([3, 1])
-        with h_col1: st.subheader("📋 Watchlist")
-        with h_col2: 
-            if st.button("Archive"): navigate_to('archive')
+        h1, h2 = st.columns([3, 1])
+        with h1: st.markdown("### 📋 WATCHLIST")
+        with h2: 
+            if st.button("ARCHIVE"): 
+                st.session_state.page = 'archive'
+                st.rerun()
 
-        # טעינת התראות
         sh = get_worksheet("Rules")
         if sh:
             try:
-                raw_data = sh.get_all_records()
-                if raw_data:
-                    df = pd.DataFrame(raw_data)
-                    # סינון לפי משתמש וסטטוס
-                    col_u = 'user_email' if 'user_email' in df.columns else 'email'
-                    if col_u in df.columns:
-                        my_alerts = df[(df[col_u] == st.session_state.user_email) & (df['status'] == 'Active')]
+                data = sh.get_all_records()
+                if data:
+                    df = pd.DataFrame(data)
+                    user_col = 'user_email' if 'user_email' in df.columns else 'email'
+                    
+                    if user_col in df.columns and 'status' in df.columns:
+                        # סינון התראות פעילות
+                        my_df = df[(df[user_col] == st.session_state.user_email) & (df['status'] == 'Active')]
                         
-                        if my_alerts.empty:
-                            st.info("No active alerts")
+                        if my_df.empty:
+                            st.info("NO ACTIVE ALERTS")
                         else:
-                            for i, row in my_alerts.iterrows():
+                            for i, row in my_df.iterrows():
                                 sym = row['symbol']
-                                # שליפת נתונים עדכניים לכרטיסייה (כולל MA150)
-                                live_data = get_stock_data_full(sym)
-                                current_p_card = live_data['price'] if live_data else 0
-                                ma150_card = live_data['ma150'] if live_data else 0
+                                # הבאת נתונים לכל כרטיסיה ברשימה
+                                stock_info = get_stock_analysis(sym)
+                                cp = stock_info['price'] if stock_info else 0
+                                ma = stock_info['ma150'] if stock_info else 0
                                 
-                                target = row['max_price'] if row['max_price'] else row['min_price']
+                                # זיהוי מחיר יעד
+                                try:
+                                    t_max = float(row.get('max_price'))
+                                except: t_max = 0
+                                try:
+                                    t_min = float(row.get('min_price'))
+                                except: t_min = 0
+                                target = t_max if t_max > 0 else t_min
                                 
-                                # עיצוב כרטיסייה
-                                with st.expander(f"{sym} | Target: ${target} | Curr: ${current_p_card:.2f}"):
+                                with st.expander(f"{sym} | TGT: ${target} | NOW: ${cp:.2f}"):
                                     c1, c2 = st.columns(2)
                                     with c1:
-                                        st.write(f"**MA 150:** ${ma150_card:.2f}")
-                                        st.write(f"**Vol:** {str(row['min_volume'])[:2]}M")
+                                        st.write(f"MA150: **${ma:.2f}**")
+                                        st.write(f"Vol: {str(row['min_volume'])[:2]}M")
                                     with c2:
-                                        diff = ((current_p_card - ma150_card) / ma150_card) * 100 if ma150_card else 0
-                                        st.write(f"**vs MA150:** {diff:+.2f}%")
+                                        if ma > 0:
+                                            d = ((cp - ma)/ma)*100
+                                            clr = "green" if d>0 else "red"
+                                            st.markdown(f"vs MA: :{clr}[{d:+.2f}%]")
                                     
-                                    # גרף בתוך האקספנדר
-                                    if live_data:
-                                        render_chart(live_data['hist'], "")
+                                    # גרף לכל פריט ברשימה
+                                    if stock_info:
+                                        render_chart(stock_info['hist'], "")
                                         
-            except Exception as e:
-                st.error(f"Error loading list: {e}")
+            except Exception as e: st.error(str(e))
 
-# ==========================================
-# ARCHIVE PAGE
-# ==========================================
 def archive_page():
-    st.title("🗄️ LOGS")
-    if st.button("BACK"): navigate_to('dashboard')
+    st.title("🗄️ ARCHIVE")
+    if st.button("BACK TO DASHBOARD"): 
+        st.session_state.page = 'dashboard'
+        st.rerun()
     st.markdown("---")
+    
     sh = get_worksheet("Rules")
     if sh:
         try:
@@ -445,16 +504,16 @@ def archive_page():
                 adf = df[(df['user_email'] == st.session_state.user_email) & (df['status'] != 'Active')]
                 for i, row in adf.iterrows():
                     st.markdown(f"""
-                    <div style="border-bottom:1px solid #333; padding:10px;">
-                        <span style="color:#FF7F50; font-weight:bold;">{row['symbol']}</span> 
-                        <span style="color:#AAA;"> | {row['created_at']}</span>
-                        <span style="float:right;">{row['status']}</span>
+                    <div style="background:#111; padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
+                        <span><b style="color:#FF7F50">{row['symbol']}</b> <span style="color:#666; font-size:0.8rem;">{row['created_at']}</span></span>
+                        <span>{row['status']}</span>
                     </div>
                     """, unsafe_allow_html=True)
+            else: st.info("ARCHIVE EMPTY")
         except: pass
 
 # ==========================================
-# MAIN RUN
+# APP ROUTER
 # ==========================================
 apply_terminal_css()
 
