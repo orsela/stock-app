@@ -104,13 +104,16 @@ def check_alerts():
             else:
                 print("-> Recurring alert (remains Active).")
 
+# --- סוף קובץ scheduler.py המעודכן ל-GitHub Actions ---
+
 if __name__ == "__main__":
-    print("🚀 Scheduler Engine v8.2 Started...")
-    while True:
-        try:
-            check_alerts()
-        except Exception as e:
-            print(f"Critical Engine Error: {e}")
+    print("🚀 Running One-Time Scan via GitHub Actions...")
+    try:
+        check_alerts() # מריץ בדיקה אחת ומסיים
+        print("✅ Scan Complete.")
+    except Exception as e:
+        print(f"❌ Error: {e}")
         
         # המתנה של 60 שניות בין סריקות
         time.sleep(60)
+
