@@ -11,6 +11,12 @@ import yfinance as yf # חובה לוודא שמותקן: pip install yfinance
 # 1. הגדרות מערכת
 # ==========================================
 st.set_page_config(page_title="StockWatcher Live", layout="wide", page_icon="⚡")
+st.write("🔍 Debug Info:")
+st.write("Available Keys in Secrets:", st.secrets.keys())
+if "gcp_service_account" not in st.secrets:
+    st.error("❌ המערכת לא מוצאת את הכותרת [gcp_service_account] ב-Secrets!")
+else:
+    st.success("✅ הכותרת נמצאה!")
 
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'user_email' not in st.session_state: st.session_state['user_email'] = None
@@ -257,3 +263,4 @@ if __name__ == "__main__":
         main_app()
     else:
         login_screen()
+
