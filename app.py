@@ -8,38 +8,6 @@ import re
 import yfinance as yf
 import hashlib # חובה להצפנת סיסמאות
 
-# --- 🔧 קוד דיאגנוסטיקה (למחוק אחרי שהבעיה נפתרת) ---
-st.subheader("🔍 בדיקת חיבור:")
-try:
-    if "gcp_service_account" in st.secrets:
-        creds_dict = dict(st.secrets["gcp_service_account"])
-        # נבדוק אם השדות החשובים קיימים (בלי להציג את הסוד עצמו)
-        if "private_key" in creds_dict:
-            key_len = len(creds_dict["private_key"])
-            st.info(f"מפתח פרטי זוהה (אורך: {key_len} תווים)")
-            
-            # בדיקה האם המפתח מתחיל ונגמר נכון
-            if not creds_dict["private_key"].startswith("-----BEGIN PRIVATE KEY"):
-                st.error("❌ המפתח הפרטי לא מתחיל ב-'-----BEGIN PRIVATE KEY'. בדוק העתקה.")
-            elif "\\n" in creds_dict["private_key"]:
-                st.warning("⚠️ המפתח מכיל תווים מסוג '\\n' (סלאש-אן). וודא שזה מועתק כטקסט אחד ארוך.")
-        else:
-            st.error("❌ חסר שדה 'private_key' ב-Secrets!")
-            
-        # ננסה להתחבר כדי לקבל את השגיאה האמיתית
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        st.success("✅ יצירת Credentials הצליחה!")
-        
-        client = gspread.authorize(creds)
-        st.success("✅ חיבור לגוגל הצליח!")
-        
-    else:
-        st.error("❌ הכותרת [gcp_service_account] חסרה.")
-except Exception as e:
-    st.error(f"💣 השגיאה המדויקת היא: {e}")
-# ----------------------------------------------------
-
 # ==========================================
 # 1. הגדרות מערכת
 # ==========================================
@@ -302,3 +270,4 @@ if __name__ == "__main__":
         main_app()
     else:
         login_screen_tabs()
+
