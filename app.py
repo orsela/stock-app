@@ -372,4 +372,5 @@ def dashboard_page():
         color = "#00CC96" if chg >= 0 else "#EF553B"
         with m_cols[i]:
             st.markdown(f"""
-            <div style="background:#111; padding:15px; border-radius:10px; text-align:center;
+            <div style="background:#111; padding:15px; border-radius:10px; text-align:center;)]
+
