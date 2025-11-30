@@ -1,0 +1,37 @@
+name: StockWatcher Bot
+
+on:
+  schedule:
+    # מריץ את הבוט כל 15 דקות (אפשר לשנות ל-10, פחות מזה לא מומלץ בחינם)
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # מאפשר לך להריץ ידנית לבדיקה בלחיצת כפתור
+
+jobs:
+  run-scheduler:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. משיכת הקוד שלך מהגיט
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # 2. התקנת פייתון
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      # 3. התקנת הספריות הנדרשות
+      - name: Install libraries
+        run: |
+          pip install --upgrade pip
+          pip install gspread oauth2client yfinance pandas
+
+      # 4. שחזור קובץ הסודות מתוך הכספת של גיטהאב
+      - name: Create secrets.json
+        run: |
+          echo '${{ secrets.GCP_JSON }}' > secrets.json
+
+      # 5. הרצת המנוע
+      - name: Run Scheduler Script
+        run: python scheduler.py
