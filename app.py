@@ -26,101 +26,58 @@ def apply_terminal_css():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono:wght@400;700&display=swap');
         
-        /* GLOBAL RESET */
-        .stApp {
-            background-color: #000000;
-            color: #FFFFFF;
-            font-family: 'Inter', sans-serif;
-        }
-        
+        .stApp { background-color: #000000; color: #FFFFFF; font-family: 'Inter', sans-serif; }
         #MainMenu, footer, header, .stDeployButton {visibility: hidden;}
 
-        /* TYPOGRAPHY */
-        h1, h2, h3, h4, h5, h6, .stMarkdown, p, label, .stMetricLabel {
-            color: #FFFFFF !important;
-            opacity: 1 !important;
-        }
-        
-        .logo-title {
-            font-size: 3rem; font-weight: 900; color: #FFFFFF;
-            text-align: center; margin-bottom: 5px; letter-spacing: -1px;
-        }
-        .logo-subtitle {
-            font-family: 'JetBrains Mono', monospace; color: #FF7F50;
-            font-size: 1rem; text-align: center; margin-bottom: 30px; letter-spacing: 1px;
-        }
+        /* Typography */
+        h1, h2, h3, h4, h5, h6, p, label, .stMetricLabel { color: #FFFFFF !important; opacity: 1 !important; }
+        .logo-title { font-size: 3rem; font-weight: 900; text-align: center; margin-bottom: 5px; letter-spacing: -1px; }
+        .logo-subtitle { font-family: 'JetBrains Mono', monospace; color: #FF7F50; font-size: 1rem; text-align: center; margin-bottom: 30px; letter-spacing: 1px; }
 
-        /* INPUTS */
+        /* Inputs */
         .stTextInput > div > div > input, .stNumberInput > div > div > input {
-            background-color: #111 !important;
-            border: 1px solid #333 !important;
-            color: #FFFFFF !important;
-            font-family: 'JetBrains Mono', monospace !important;
-            font-weight: 700;
-            font-size: 1.1rem;
+            background-color: #111 !important; border: 1px solid #333 !important; color: #FFFFFF !important;
+            font-family: 'JetBrains Mono', monospace !important; font-weight: 700; font-size: 1.1rem;
         }
         
-        /* BUTTONS */
+        /* Buttons */
         .stButton > button {
-            background-color: #FF7F50 !important;
-            color: #000000 !important;
-            border: none !important;
-            font-weight: 800 !important;
-            border-radius: 4px !important;
-            text-transform: uppercase;
-            font-size: 1rem;
+            background-color: #FF7F50 !important; color: #000000 !important; border: none !important;
+            font-weight: 800 !important; border-radius: 4px !important; text-transform: uppercase; font-size: 1rem;
         }
-        .stButton > button:hover {
-            background-color: #FF6347 !important;
-            transform: scale(1.02);
-        }
+        .stButton > button:hover { background-color: #FF6347 !important; transform: scale(1.02); }
 
-        /* SOCIAL BUTTONS (SQUARES) */
+        /* Social Buttons */
         div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            background: #FFFFFF !important;
-            border-radius: 8px !important;
+            background: #FFFFFF !important; border-radius: 8px !important;
             background-image: -webkit-linear-gradient(45deg, #4285F4, #DB4437, #F4B400, #0F9D58) !important;
-            -webkit-background-clip: text !important;
-            -webkit-text-fill-color: transparent !important;
-            font-size: 26px !important; font-weight: 900 !important;
-            height: 60px !important;
+            -webkit-background-clip: text !important; -webkit-text-fill-color: transparent !important;
+            font-size: 26px !important; font-weight: 900 !important; height: 60px !important;
         }
         div[data-testid="column"]:nth-of-type(3) div.stButton > button {
-            background: #FFFFFF !important; color: #000 !important;
-            border-radius: 8px !important; font-size: 26px !important;
-            height: 60px !important;
+            background: #FFFFFF !important; color: #000 !important; border-radius: 8px !important;
+            font-size: 26px !important; height: 60px !important;
         }
         div[data-testid="column"]:nth-of-type(4) div.stButton > button {
-            background: #0077b5 !important; color: #FFF !important;
-            border-radius: 8px !important; font-size: 26px !important;
-            height: 60px !important;
+            background: #0077b5 !important; color: #FFF !important; border-radius: 8px !important;
+            font-size: 26px !important; height: 60px !important;
         }
 
-        /* TICKER TAPE */
-        .ticker-wrap {
-            width: 100%; overflow: hidden; background-color: #111;
-            border-bottom: 1px solid #333; padding: 10px 0; margin-bottom: 20px;
-            white-space: nowrap;
-        }
+        /* Ticker */
+        .ticker-wrap { width: 100%; overflow: hidden; background-color: #111; border-bottom: 1px solid #333; padding: 10px 0; margin-bottom: 20px; white-space: nowrap; }
         .ticker-move { display: inline-block; animation: ticker 35s linear infinite; }
-        .ticker-item { 
-            display: inline-block; padding: 0 2rem; 
-            font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #00FF00; 
-        }
+        .ticker-item { display: inline-block; padding: 0 2rem; font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #00FF00; }
         @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
 
-        /* STOCK INFO */
+        /* Stock Cards */
         .stock-header { font-size: 2.5rem; font-weight: 900; color: #FF7F50; margin: 0; }
         .stock-price-lg { font-size: 2rem; font-family: 'JetBrains Mono'; font-weight: 700; }
-        .ma-box {
-            background: #222; border: 1px solid #444; padding: 10px; border-radius: 5px;
-            text-align: center; margin-bottom: 10px;
-        }
+        .ma-box { background: #222; border: 1px solid #444; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; }
         </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# SESSION & GOOGLE SHEETS
+# SESSION & AUTH
 # ==========================================
 if 'page' not in st.session_state: st.session_state['page'] = 'auth'
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
@@ -177,6 +134,10 @@ def login_user(email, password):
 # ==========================================
 # DATA & LOGIC
 # ==========================================
+def safe_float(val):
+    try: return float(val)
+    except: return 0.0
+
 @st.cache_data(ttl=30)
 def get_top_metrics():
     tickers = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "BTC": "BTC-USD", "VIX": "^VIX"}
@@ -210,7 +171,7 @@ def get_stock_analysis(symbol):
 def save_alert(ticker, min_p, max_p, vol, one_time):
     sheet = get_worksheet("Rules")
     if not sheet: 
-        st.error("DB Connection Failed")
+        st.error("DB Error")
         return
     row = [
         st.session_state.user_email, ticker, 
@@ -232,8 +193,7 @@ def render_chart(hist, title):
         title=dict(text=title, font=dict(color='white')),
         height=350, margin=dict(l=0, r=0, t=30, b=0),
         paper_bgcolor='#000', plot_bgcolor='#000',
-        font=dict(color='white'),
-        xaxis_rangeslider_visible=False
+        font=dict(color='white'), xaxis_rangeslider_visible=False
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -278,7 +238,6 @@ def auth_page():
                 else: st.error("Error")
 
 def dashboard_page():
-    # Ticker Tape
     metrics = get_top_metrics()
     tape_html = ""
     for k, v in metrics.items():
@@ -294,7 +253,6 @@ def dashboard_page():
             st.session_state.page = 'auth'
             st.rerun()
 
-    # Cards
     cols = st.columns(4)
     i = 0
     for k, v in metrics.items():
@@ -312,7 +270,6 @@ def dashboard_page():
 
     col_setup, col_list = st.columns([1.2, 1.8], gap="large")
 
-    # --- SETUP (LEFT) ---
     with col_setup:
         st.markdown("### ⚡ QUICK ACTION")
         with st.container(border=True):
@@ -355,17 +312,8 @@ def dashboard_page():
 
             s_max = curr * 3 if curr > 0 else 1000.0
             
-            st.number_input(
-                "MANUAL PRICE ($)", 
-                value=float(st.session_state.target_price),
-                step=0.5, key="inp_val", on_change=update_from_input
-            )
-            st.slider(
-                "FINE TUNE",
-                min_value=0.0, max_value=s_max,
-                value=float(st.session_state.target_price),
-                step=0.1, key="sld_val", on_change=update_from_slider
-            )
+            st.number_input("MANUAL PRICE ($)", value=float(st.session_state.target_price), step=0.5, key="inp_val", on_change=update_from_input)
+            st.slider("FINE TUNE", min_value=0.0, max_value=s_max, value=float(st.session_state.target_price), step=0.1, key="sld_val", on_change=update_from_slider)
             
             final_target = st.session_state.target_price
             st.markdown(f"**ORDER PRICE:** <span style='color:#FF7F50; font-size:1.2rem; font-family:JetBrains Mono'>${final_target:.2f}</span>", unsafe_allow_html=True)
@@ -378,7 +326,6 @@ def dashboard_page():
                     max_p = final_target if final_target > curr else 0
                     save_alert(symbol, min_p, max_p, vol*1000000, True)
 
-    # --- WATCHLIST (RIGHT) ---
     with col_list:
         h1, h2 = st.columns([3, 1])
         with h1: st.markdown("### 📋 WATCHLIST")
@@ -393,26 +340,70 @@ def dashboard_page():
                 data = sh.get_all_records()
                 if data:
                     df = pd.DataFrame(data)
-                    user_col = 'user_email' if 'user_email' in df.columns else 'email'
+                    uc = 'user_email' if 'user_email' in df.columns else 'email'
                     
-                    if user_col in df.columns and 'status' in df.columns:
-                        my_df = df[(df[user_col] == st.session_state.user_email) & (df['status'] == 'Active')]
+                    if uc in df.columns and 'status' in df.columns:
+                        my_df = df[(df[uc] == st.session_state.user_email) & (df['status'] == 'Active')]
                         
                         if my_df.empty:
                             st.info("NO ACTIVE ALERTS")
                         else:
                             for i, row in my_df.iterrows():
                                 sym = row['symbol']
-                                # בטיחות - שימוש ב-get כדי למנוע קריסה
-                                # -----------------------------------
-                                # שליפת ווליום בטוחה
-                                vol_raw = row.get('min_volume', 0)
-                                vol_display = str(vol_raw)[:2]
-
-                                # שליפת מחירי יעד בטוחה
-                                t_max = float(row.get('max_price', 0)) if row.get('max_price') else 0
-                                t_min = float(row.get('min_price', 0)) if row.get('min_price') else 0
+                                
+                                # מניעת השגיאה - חילוץ נתונים מופרד ומוגן
+                                t_max = safe_float(row.get('max_price'))
+                                t_min = safe_float(row.get('min_price'))
                                 target = t_max if t_max > 0 else t_min
+                                
+                                v_raw = safe_float(row.get('min_volume'))
+                                vol_display = str(v_raw)[:2] if v_raw else "0"
 
-                                # שליפת נתונים עדכניים
-                                stock_info =
+                                stock_info = get_stock_analysis(sym)
+                                cp = stock_info['price'] if stock_info else 0
+                                ma = stock_info['ma150'] if stock_info else 0
+                                
+                                with st.expander(f"{sym} | TGT: ${target} | NOW: ${cp:.2f}"):
+                                    c1, c2 = st.columns(2)
+                                    with c1:
+                                        st.write(f"MA150: **${ma:.2f}**")
+                                        st.write(f"Vol: {vol_display}M")
+                                    with c2:
+                                        if ma > 0:
+                                            d = ((cp - ma)/ma)*100
+                                            clr = "green" if d>0 else "red"
+                                            st.markdown(f"vs MA: :{clr}[{d:+.2f}%]")
+                                    
+                                    if stock_info:
+                                        render_chart(stock_info['hist'], "")
+                                        
+            except Exception as e: st.error(f"List Error: {e}")
+
+def archive_page():
+    st.title("🗄️ ARCHIVE")
+    if st.button("BACK"): 
+        st.session_state.page = 'dashboard'
+        st.rerun()
+    st.markdown("---")
+    sh = get_worksheet("Rules")
+    if sh:
+        try:
+            df = pd.DataFrame(sh.get_all_records())
+            if not df.empty and 'user_email' in df.columns:
+                adf = df[(df['user_email'] == st.session_state.user_email) & (df['status'] != 'Active')]
+                for i, row in adf.iterrows():
+                    st.markdown(f"""
+                    <div style="background:#111; padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
+                        <span><b style="color:#FF7F50">{row['symbol']}</b> <span style="color:#666; font-size:0.8rem;">{row['created_at']}</span></span>
+                        <span>{row['status']}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+        except: pass
+
+apply_terminal_css()
+
+if st.session_state.logged_in:
+    if st.session_state['page'] == 'archive': archive_page()
+    else: dashboard_page()
+else:
+    auth_page()
