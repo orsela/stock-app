@@ -126,26 +126,40 @@ def show_secure_alert_form():
 
 def save_alert_to_db(ticker, min_price, max_price, is_one_time, status):
     """
-    פונקציית השמירה ל-Google Sheets.
-    הערב נחליף את ה-Print בשורת הוספה ל-Sheet.
+    שמירת התראה תואמת למבנה הגיליון:
+    A: user_email, B: symbol, C: min_price, D: max_price, E: min_vol, F: last_alert, G: is_one_time, H: status
     """
-    # המרת None למחרוזת ריקה עבור השיטס, או שמירה כ-None
-    min_final = min_price if min_price is not None else ""
-    max_final = max_price if max_price is not None else ""
     
-    # יצירת מבנה הנתונים לשמירה
-    new_row_data = [
-        str(datetime.now()), # Timestamp
-        ticker,              # Ticker (Sanitized)
-        min_final,           # Min Price
-        max_final,           # Max Price
-        "TRUE" if is_one_time else "FALSE", # OneTime Column (New!)
-        status,              # Status Column (New!)
-        ""                   # Last Sent (Empty initially)
+    # 1. שליפת האימייל של המשתמש המחובר
+    # הערה: אני מניח ששמרת את האימייל ב-st.session_state בעת ההתחברות.
+    # אם לא, תחליף את השורה הזו במשתנה שמחזיק את האימייל.
+    user_email = st.session_state.get('user_email', 'unknown_user') 
+
+    # 2. טיפול בערכים חסרים (סניטציה)
+    final_min = min_price if min_price is not None else ""
+    final_max = max_price if max_price is not None else ""
+    
+    # 3. ערך דיפולטיבי לווליום (כי לא הוספנו את זה בטופס כרגע)
+    default_min_vol = 0 
+    
+    # 4. יצירת השורה בסדר המדויק של הגיליון (A -> H)
+    row_to_append = [
+        user_email,                          # A: user_email
+        ticker,                              # B: symbol
+        final_min,                           # C: min_price
+        final_max,                           # D: max_price
+        default_min_vol,                     # E: min_vol
+        "",                                  # F: last_alert (ריק ביצירה חדשה)
+        "TRUE" if is_one_time else "FALSE",  # G: is_one_time (החדש)
+        status                               # H: status (החדש - Active)
     ]
     
-    # --- כאן תבוא הפקודה: sheet.append_row(new_row_data) ---
-    st.success(f"✅ ההתראה עבור {ticker} נשמרה בהצלחה!")
+    # כאן הפקודה שכותבת לשיטס (התאם למשתנה ה-sheet שלך)
+    # sheet.append_row(row_to_append)
+    
+    # הדפסה ללוג לבדיקה
+    print(f"DEBUG: Saving row -> {row_to_append}")
+    st.success(f"✅ ההתראה על {ticker} נשמרה בהצלחה!")
     st.json({
         "Ticker": ticker,
         "Min": min_final,
@@ -158,3 +172,4 @@ def save_alert_to_db(ticker, min_price, max_price, is_one_time, status):
 if __name__ == "__main__":
     st.set_page_config(page_title="StockWatcher Secure", layout="centered")
     show_secure_alert_form()
+
