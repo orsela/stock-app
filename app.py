@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 import yfinance as yf
 import hashlib
@@ -19,24 +19,23 @@ st.set_page_config(
 )
 
 # ==========================================
-# TERMINAL CSS (High Contrast, Readable)
+# TERMINAL CSS
 # ==========================================
 def apply_terminal_css():
     st.markdown("""
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono:wght@400;700&display=swap');
         
-        /* --- GLOBAL RESET --- */
+        /* GLOBAL RESET */
         .stApp {
             background-color: #000000;
             color: #FFFFFF;
             font-family: 'Inter', sans-serif;
         }
         
-        /* הסתרת אלמנטים מיותרים */
         #MainMenu, footer, header, .stDeployButton {visibility: hidden;}
 
-        /* --- TYPOGRAPHY --- */
+        /* TYPOGRAPHY */
         h1, h2, h3, h4, h5, h6, .stMarkdown, p, label, .stMetricLabel {
             color: #FFFFFF !important;
             opacity: 1 !important;
@@ -51,7 +50,7 @@ def apply_terminal_css():
             font-size: 1rem; text-align: center; margin-bottom: 30px; letter-spacing: 1px;
         }
 
-        /* --- INPUTS & SLIDERS --- */
+        /* INPUTS */
         .stTextInput > div > div > input, .stNumberInput > div > div > input {
             background-color: #111 !important;
             border: 1px solid #333 !important;
@@ -61,7 +60,7 @@ def apply_terminal_css():
             font-size: 1.1rem;
         }
         
-        /* --- BUTTONS --- */
+        /* BUTTONS */
         .stButton > button {
             background-color: #FF7F50 !important;
             color: #000000 !important;
@@ -76,7 +75,7 @@ def apply_terminal_css():
             transform: scale(1.02);
         }
 
-        /* --- SOCIAL BUTTONS (SQUARES) --- */
+        /* SOCIAL BUTTONS (SQUARES) */
         div[data-testid="column"]:nth-of-type(2) div.stButton > button {
             background: #FFFFFF !important;
             border-radius: 8px !important;
@@ -97,7 +96,7 @@ def apply_terminal_css():
             height: 60px !important;
         }
 
-        /* --- TICKER TAPE --- */
+        /* TICKER TAPE */
         .ticker-wrap {
             width: 100%; overflow: hidden; background-color: #111;
             border-bottom: 1px solid #333; padding: 10px 0; margin-bottom: 20px;
@@ -110,15 +109,9 @@ def apply_terminal_css():
         }
         @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
 
-        /* --- STOCK HEADER --- */
-        .stock-header {
-            font-size: 2.5rem; font-weight: 900; color: #FF7F50; margin: 0;
-        }
-        .stock-price-lg {
-            font-size: 2rem; font-family: 'JetBrains Mono'; font-weight: 700;
-        }
-
-        /* --- MA150 BADGE --- */
+        /* STOCK INFO */
+        .stock-header { font-size: 2.5rem; font-weight: 900; color: #FF7F50; margin: 0; }
+        .stock-price-lg { font-size: 2rem; font-family: 'JetBrains Mono'; font-weight: 700; }
         .ma-box {
             background: #222; border: 1px solid #444; padding: 10px; border-radius: 5px;
             text-align: center; margin-bottom: 10px;
@@ -127,16 +120,13 @@ def apply_terminal_css():
     """, unsafe_allow_html=True)
 
 # ==========================================
-# SESSION STATE INIT
+# SESSION & GOOGLE SHEETS
 # ==========================================
 if 'page' not in st.session_state: st.session_state['page'] = 'auth'
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'user_email' not in st.session_state: st.session_state['user_email'] = None
 if 'target_price' not in st.session_state: st.session_state['target_price'] = 0.0
 
-# ==========================================
-# GOOGLE SHEETS & AUTH
-# ==========================================
 def get_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
@@ -185,11 +175,10 @@ def login_user(email, password):
     return False
 
 # ==========================================
-# MARKET DATA LOGIC
+# DATA & LOGIC
 # ==========================================
 @st.cache_data(ttl=30)
 def get_top_metrics():
-    """מביא נתונים לפס העליון"""
     tickers = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "BTC": "BTC-USD", "VIX": "^VIX"}
     data = {}
     for name, symbol in tickers.items():
@@ -207,26 +196,15 @@ def get_top_metrics():
 
 @st.cache_data(ttl=60)
 def get_stock_analysis(symbol):
-    """ניתוח מעמיק למניה ספציפית כולל MA150"""
     try:
         t = yf.Ticker(symbol)
-        # משיכת היסטוריה של שנה לחישוב ממוצעים
         hist = t.history(period="1y")
         if hist.empty: return None
-        
         current = hist['Close'].iloc[-1]
-        
-        # חישוב MA150
         ma150 = 0.0
         if len(hist) >= 150:
             ma150 = hist['Close'].rolling(window=150).mean().iloc[-1]
-        
-        return {
-            "price": current,
-            "ma150": ma150,
-            "hist": hist,
-            "symbol": symbol
-        }
+        return {"price": current, "ma150": ma150, "hist": hist, "symbol": symbol}
     except: return None
 
 def save_alert(ticker, min_p, max_p, vol, one_time):
@@ -260,7 +238,7 @@ def render_chart(hist, title):
     st.plotly_chart(fig, use_container_width=True)
 
 # ==========================================
-# UI PAGES
+# PAGES
 # ==========================================
 def auth_page():
     col_img, col_form = st.columns([1.5, 1])
@@ -274,7 +252,6 @@ def auth_page():
         st.markdown('<div class="logo-subtitle">TERMINAL ACCESS</div>', unsafe_allow_html=True)
         
         tab1, tab2 = st.tabs(["LOG IN", "SIGN UP"])
-        
         with tab1:
             e = st.text_input("EMAIL", key="le")
             p = st.text_input("PASSWORD", type="password", key="lp")
@@ -301,18 +278,14 @@ def auth_page():
                 else: st.error("Error")
 
 def dashboard_page():
-    # 1. Ticker Tape (HTML)
+    # Ticker Tape
     metrics = get_top_metrics()
     tape_html = ""
     for k, v in metrics.items():
         color = "#00FF00" if v[1] >= 0 else "#FF0000"
         tape_html += f'<div class="ticker-item">{k}: <span style="color:{color}">{v[0]:,.2f} ({v[1]:+.2f}%)</span></div>'
-    
-    st.markdown(f"""
-    <div class="ticker-wrap"><div class="ticker-move">{tape_html * 3}</div></div>
-    """, unsafe_allow_html=True)
+    st.markdown(f'<div class="ticker-wrap"><div class="ticker-move">{tape_html * 3}</div></div>', unsafe_allow_html=True)
 
-    # 2. Header & Logout
     c1, c2 = st.columns([8, 1])
     with c1: st.title("MARKET DASHBOARD")
     with c2: 
@@ -321,7 +294,7 @@ def dashboard_page():
             st.session_state.page = 'auth'
             st.rerun()
 
-    # 3. Top Cards
+    # Cards
     cols = st.columns(4)
     i = 0
     for k, v in metrics.items():
@@ -337,7 +310,6 @@ def dashboard_page():
         i += 1
     st.markdown("---")
 
-    # 4. Main Workspace
     col_setup, col_list = st.columns([1.2, 1.8], gap="large")
 
     # --- SETUP (LEFT) ---
@@ -345,10 +317,7 @@ def dashboard_page():
         st.markdown("### ⚡ QUICK ACTION")
         with st.container(border=True):
             symbol = st.text_input("SEARCH TICKER", value="NVDA").upper()
-            
-            # משתנים מקומיים
             curr = 0.0
-            ma150 = 0.0
             
             if symbol:
                 data = get_stock_analysis(symbol)
@@ -356,7 +325,6 @@ def dashboard_page():
                     curr = data['price']
                     ma150 = data['ma150']
                     
-                    # הצגת כותרת מניה + מחיר
                     st.markdown(f"""
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <h1 class="stock-header">{symbol}</h1>
@@ -364,7 +332,6 @@ def dashboard_page():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # הצגת MA150
                     diff_ma = ((curr - ma150) / ma150) * 100 if ma150 else 0
                     ma_color = "#10B981" if diff_ma > 0 else "#EF4444"
                     st.markdown(f"""
@@ -375,52 +342,31 @@ def dashboard_page():
                     </div>
                     """, unsafe_allow_html=True)
                     
-                    # גרף קטן
                     render_chart(data['hist'], "")
-                    
-                    # אתחול מחיר יעד אם לא קיים
                     if st.session_state.target_price == 0:
                         st.session_state.target_price = curr
-                        
                 else: st.error("Ticker Not Found")
 
             st.markdown("---")
             st.markdown("#### 🎯 SET TARGET")
 
-            # --- מנגנון סנכרון סליידר-אינפוט ---
-            
-            # חישוב גבולות לסליידר
-            s_min = 0.0
+            def update_from_input(): st.session_state.target_price = st.session_state.inp_val
+            def update_from_slider(): st.session_state.target_price = st.session_state.sld_val
+
             s_max = curr * 3 if curr > 0 else 1000.0
             
-            # קולבקים (Callbacks) לעדכון הדדי
-            def update_from_input():
-                st.session_state.target_price = st.session_state.inp_val
-            
-            def update_from_slider():
-                st.session_state.target_price = st.session_state.sld_val
-
-            # קלט מספרי (Input)
             st.number_input(
                 "MANUAL PRICE ($)", 
                 value=float(st.session_state.target_price),
-                step=0.5,
-                key="inp_val",
-                on_change=update_from_input
+                step=0.5, key="inp_val", on_change=update_from_input
             )
-            
-            # סליידר (Slider)
             st.slider(
                 "FINE TUNE",
-                min_value=s_min,
-                max_value=s_max,
+                min_value=0.0, max_value=s_max,
                 value=float(st.session_state.target_price),
-                step=0.1,
-                key="sld_val",
-                on_change=update_from_slider
+                step=0.1, key="sld_val", on_change=update_from_slider
             )
             
-            # תצוגה סופית
             final_target = st.session_state.target_price
             st.markdown(f"**ORDER PRICE:** <span style='color:#FF7F50; font-size:1.2rem; font-family:JetBrains Mono'>${final_target:.2f}</span>", unsafe_allow_html=True)
             
@@ -450,7 +396,6 @@ def dashboard_page():
                     user_col = 'user_email' if 'user_email' in df.columns else 'email'
                     
                     if user_col in df.columns and 'status' in df.columns:
-                        # סינון התראות פעילות
                         my_df = df[(df[user_col] == st.session_state.user_email) & (df['status'] == 'Active')]
                         
                         if my_df.empty:
@@ -458,67 +403,16 @@ def dashboard_page():
                         else:
                             for i, row in my_df.iterrows():
                                 sym = row['symbol']
-                                # הבאת נתונים לכל כרטיסיה ברשימה
-                                stock_info = get_stock_analysis(sym)
-                                cp = stock_info['price'] if stock_info else 0
-                                ma = stock_info['ma150'] if stock_info else 0
-                                
-                                # זיהוי מחיר יעד
-                                try:
-                                    t_max = float(row.get('max_price'))
-                                except: t_max = 0
-                                try:
-                                    t_min = float(row.get('min_price'))
-                                except: t_min = 0
+                                # בטיחות - שימוש ב-get כדי למנוע קריסה
+                                # -----------------------------------
+                                # שליפת ווליום בטוחה
+                                vol_raw = row.get('min_volume', 0)
+                                vol_display = str(vol_raw)[:2]
+
+                                # שליפת מחירי יעד בטוחה
+                                t_max = float(row.get('max_price', 0)) if row.get('max_price') else 0
+                                t_min = float(row.get('min_price', 0)) if row.get('min_price') else 0
                                 target = t_max if t_max > 0 else t_min
-                                
-                                with st.expander(f"{sym} | TGT: ${target} | NOW: ${cp:.2f}"):
-                                    c1, c2 = st.columns(2)
-                                    with c1:
-                                        st.write(f"MA150: **${ma:.2f}**")
-                                        st.write(f"Vol: {str(row['min_volume'])[:2]}M")
-                                    with c2:
-                                        if ma > 0:
-                                            d = ((cp - ma)/ma)*100
-                                            clr = "green" if d>0 else "red"
-                                            st.markdown(f"vs MA: :{clr}[{d:+.2f}%]")
-                                    
-                                    # גרף לכל פריט ברשימה
-                                    if stock_info:
-                                        render_chart(stock_info['hist'], "")
-                                        
-            except Exception as e: st.error(str(e))
 
-def archive_page():
-    st.title("🗄️ ARCHIVE")
-    if st.button("BACK TO DASHBOARD"): 
-        st.session_state.page = 'dashboard'
-        st.rerun()
-    st.markdown("---")
-    
-    sh = get_worksheet("Rules")
-    if sh:
-        try:
-            df = pd.DataFrame(sh.get_all_records())
-            if not df.empty and 'user_email' in df.columns:
-                adf = df[(df['user_email'] == st.session_state.user_email) & (df['status'] != 'Active')]
-                for i, row in adf.iterrows():
-                    st.markdown(f"""
-                    <div style="background:#111; padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
-                        <span><b style="color:#FF7F50">{row['symbol']}</b> <span style="color:#666; font-size:0.8rem;">{row['created_at']}</span></span>
-                        <span>{row['status']}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else: st.info("ARCHIVE EMPTY")
-        except: pass
-
-# ==========================================
-# APP ROUTER
-# ==========================================
-apply_terminal_css()
-
-if st.session_state.logged_in:
-    if st.session_state['page'] == 'archive': archive_page()
-    else: dashboard_page()
-else:
-    auth_page()
+                                # שליפת נתונים עדכניים
+                                stock_info =
