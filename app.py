@@ -19,7 +19,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. STYLING (TERMINAL UI)
+# 2. CSS STYLING (TERMINAL UI)
 # ==========================================
 def apply_terminal_css():
     st.markdown("""
@@ -195,47 +195,6 @@ def render_chart(hist, title):
     )
     st.plotly_chart(fig, use_container_width=True)
 
-# ----------------------------------------------------
-# HELPER: ISOLATED ROW RENDERER (THE FIX)
-# ----------------------------------------------------
-def render_watchlist_row(row):
-    """Render a single watchlist item safely"""
-    sym = row['symbol']
-    
-    # 1. Extract Values
-    t_max = safe_float(row.get('max_price'))
-    t_min = safe_float(row.get('min_price'))
-    target = t_max if t_max > 0 else t_min
-    
-    v_raw = safe_float(row.get('min_volume'))
-    vol_display = str(v_raw)[:2] if v_raw > 0 else "0"
-
-    # 2. Get Data
-    info = get_stock_analysis(sym)
-    
-    # 3. Default display values
-    cp = 0.0
-    ma = 0.0
-    
-    if info:
-        cp = info['price']
-        ma = info['ma150']
-
-    # 4. Render UI
-    with st.expander(f"{sym} | TGT: ${target} | NOW: ${cp:.2f}"):
-        c1, c2 = st.columns(2)
-        with c1:
-            st.write(f"MA150: **${ma:.2f}**")
-            st.write(f"Vol: {vol_display}M")
-        with c2:
-            if ma > 0:
-                d = ((cp - ma)/ma)*100
-                clr = "green" if d>0 else "red"
-                st.markdown(f"vs MA: :{clr}[{d:+.2f}%]")
-        
-        if info:
-            render_chart(info['hist'], "")
-
 # ==========================================
 # 5. UI PAGES
 # ==========================================
@@ -277,7 +236,6 @@ def auth_page():
                 else: st.error("Error")
 
 def dashboard_page():
-    # Ticker
     metrics = get_top_metrics()
     tape_html = ""
     for k, v in metrics.items():
@@ -364,4 +322,105 @@ def dashboard_page():
             s_max = curr * 3 if curr > 0 else 1000.0
             
             st.number_input("MANUAL PRICE ($)", value=float(st.session_state.target_price), step=0.5, key="inp_val", on_change=update_from_input)
-            st.slider("FINE TUNE", min_value=0.0, max_value=s_max, value=float(st.session_state.target_price), step=0.1, key="sld_val", on_change=update_from_
+            st.slider("FINE TUNE", min_value=0.0, max_value=s_max, value=float(st.session_state.target_price), step=0.1, key="sld_val", on_change=update_from_slider)
+            
+            final_target = st.session_state.target_price
+            st.markdown(f"**ORDER PRICE:** <span style='color:#FF7F50; font-size:1.2rem; font-family:JetBrains Mono'>${final_target:.2f}</span>", unsafe_allow_html=True)
+            
+            vol = st.number_input("MIN VOL (M)", value=5, step=1)
+            
+            if st.button("ACTIVATE ALERT", use_container_width=True):
+                if symbol and final_target > 0:
+                    min_p = final_target if final_target < curr else 0
+                    max_p = final_target if final_target > curr else 0
+                    save_alert(symbol, min_p, max_p, vol*1000000, True)
+
+    # --- RIGHT: WATCHLIST ---
+    with col_list:
+        h1, h2 = st.columns([3, 1])
+        with h1: st.markdown("### 📋 WATCHLIST")
+        with h2: 
+            if st.button("ARCHIVE"): 
+                st.session_state.page = 'archive'
+                st.rerun()
+
+        sh = get_worksheet("Rules")
+        if sh:
+            try:
+                data = sh.get_all_records()
+                if data:
+                    df = pd.DataFrame(data)
+                    uc = 'user_email' if 'user_email' in df.columns else 'email'
+                    
+                    if uc in df.columns and 'status' in df.columns:
+                        my_df = df[(df[uc] == st.session_state.user_email) & (df['status'] == 'Active')]
+                        
+                        if my_df.empty:
+                            st.info("NO ACTIVE ALERTS")
+                        else:
+                            for i, row in my_df.iterrows():
+                                sym = row['symbol']
+                                
+                                t_max = safe_float(row.get('max_price'))
+                                t_min = safe_float(row.get('min_price'))
+                                target = t_max if t_max > 0 else t_min
+                                
+                                v_raw = safe_float(row.get('min_volume'))
+                                vol_display = str(v_raw)[:2]
+
+                                # FIX: Direct call, no complex line breaking
+                                stock_info = get_stock_analysis(sym)
+                                
+                                cp = 0.0
+                                ma = 0.0
+                                if stock_info:
+                                    cp = stock_info['price']
+                                    ma = stock_info['ma150']
+                                
+                                with st.expander(f"{sym} | TGT: ${target} | NOW: ${cp:.2f}"):
+                                    c1, c2 = st.columns(2)
+                                    with c1:
+                                        st.write(f"MA150: **${ma:.2f}**")
+                                        st.write(f"Vol: {vol_display}M")
+                                    with c2:
+                                        if ma > 0:
+                                            d = ((cp - ma)/ma)*100
+                                            clr = "green" if d>0 else "red"
+                                            st.markdown(f"vs MA: :{clr}[{d:+.2f}%]")
+                                    
+                                    if stock_info:
+                                        render_chart(stock_info['hist'], "")
+                                        
+            except Exception as e: st.error(f"List Error: {e}")
+
+def archive_page():
+    st.title("🗄️ ARCHIVE")
+    if st.button("BACK"): 
+        st.session_state.page = 'dashboard'
+        st.rerun()
+    st.markdown("---")
+    sh = get_worksheet("Rules")
+    if sh:
+        try:
+            df = pd.DataFrame(sh.get_all_records())
+            if not df.empty and 'user_email' in df.columns:
+                adf = df[(df['user_email'] == st.session_state.user_email) & (df['status'] != 'Active')]
+                for i, row in adf.iterrows():
+                    st.markdown(f"""
+                    <div style="background:#111; padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
+                        <span><b style="color:#FF7F50">{row['symbol']}</b> <span style="color:#666; font-size:0.8rem;">{row['created_at']}</span></span>
+                        <span>{row['status']}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+        except: pass
+
+# ==========================================
+# 6. RUN
+# ==========================================
+apply_terminal_css()
+
+if st.session_state.logged_in:
+    if st.session_state['page'] == 'archive': archive_page()
+    else: dashboard_page()
+else:
+    auth_page()
