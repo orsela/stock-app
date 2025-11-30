@@ -9,7 +9,7 @@ import hashlib
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. APP CONFIGURATION
+# 1. CONFIGURATION
 # ==========================================
 st.set_page_config(
     page_title="StockPulse Terminal",
@@ -19,7 +19,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. CSS STYLING (TERMINAL STYLE)
+# 2. STYLING (TERMINAL UI)
 # ==========================================
 def apply_terminal_css():
     st.markdown("""
@@ -29,22 +29,17 @@ def apply_terminal_css():
         .stApp { background-color: #000000; color: #FFFFFF; font-family: 'Inter', sans-serif; }
         #MainMenu, footer, header, .stDeployButton {visibility: hidden;}
 
-        /* Typography */
         h1, h2, h3, h4, h5, h6, p, label, .stMetricLabel { color: #FFFFFF !important; opacity: 1 !important; }
-        .logo-title { font-size: 3rem; font-weight: 900; text-align: center; margin-bottom: 5px; letter-spacing: -1px; }
-        .logo-subtitle { font-family: 'JetBrains Mono', monospace; color: #FF7F50; font-size: 1rem; text-align: center; margin-bottom: 30px; letter-spacing: 1px; }
         
-        /* Dashboard Logo */
+        /* Logo */
         .dashboard-logo { font-size: 2.2rem; font-weight: 900; color: #FFFFFF; margin: 0; letter-spacing: -1px; line-height: 1; }
         .dashboard-sub { font-family: 'JetBrains Mono', monospace; color: #FF7F50; font-size: 0.8rem; letter-spacing: 1px; }
-
-        /* Inputs */
+        
+        /* Components */
         .stTextInput > div > div > input, .stNumberInput > div > div > input {
             background-color: #111 !important; border: 1px solid #333 !important; color: #FFFFFF !important;
             font-family: 'JetBrains Mono', monospace !important; font-weight: 700; font-size: 1.1rem;
         }
-        
-        /* Buttons */
         .stButton > button {
             background-color: #FF7F50 !important; color: #000000 !important; border: none !important;
             font-weight: 800 !important; border-radius: 4px !important; text-transform: uppercase; font-size: 1rem;
@@ -67,7 +62,7 @@ def apply_terminal_css():
             font-size: 26px !important; height: 60px !important;
         }
 
-        /* Ticker & Cards */
+        /* Widgets */
         .ticker-wrap { width: 100%; overflow: hidden; background-color: #111; border-bottom: 1px solid #333; padding: 10px 0; margin-bottom: 20px; white-space: nowrap; }
         .ticker-move { display: inline-block; animation: ticker 35s linear infinite; }
         .ticker-item { display: inline-block; padding: 0 2rem; font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #00FF00; }
@@ -80,7 +75,7 @@ def apply_terminal_css():
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 3. STATE MANAGEMENT
+# 3. STATE
 # ==========================================
 if 'page' not in st.session_state: st.session_state['page'] = 'auth'
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
@@ -88,8 +83,12 @@ if 'user_email' not in st.session_state: st.session_state['user_email'] = None
 if 'target_price' not in st.session_state: st.session_state['target_price'] = 0.0
 
 # ==========================================
-# 4. BACKEND FUNCTIONS
+# 4. BACKEND & LOGIC
 # ==========================================
+def safe_float(val):
+    try: return float(val)
+    except: return 0.0
+
 def get_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
@@ -136,10 +135,6 @@ def login_user(email, password):
         if check_hashes(password, user.iloc[0]['password']): return True
     except: pass
     return False
-
-def safe_float(val):
-    try: return float(val)
-    except: return 0.0
 
 @st.cache_data(ttl=30)
 def get_top_metrics():
@@ -200,6 +195,47 @@ def render_chart(hist, title):
     )
     st.plotly_chart(fig, use_container_width=True)
 
+# ----------------------------------------------------
+# HELPER: ISOLATED ROW RENDERER (THE FIX)
+# ----------------------------------------------------
+def render_watchlist_row(row):
+    """Render a single watchlist item safely"""
+    sym = row['symbol']
+    
+    # 1. Extract Values
+    t_max = safe_float(row.get('max_price'))
+    t_min = safe_float(row.get('min_price'))
+    target = t_max if t_max > 0 else t_min
+    
+    v_raw = safe_float(row.get('min_volume'))
+    vol_display = str(v_raw)[:2] if v_raw > 0 else "0"
+
+    # 2. Get Data
+    info = get_stock_analysis(sym)
+    
+    # 3. Default display values
+    cp = 0.0
+    ma = 0.0
+    
+    if info:
+        cp = info['price']
+        ma = info['ma150']
+
+    # 4. Render UI
+    with st.expander(f"{sym} | TGT: ${target} | NOW: ${cp:.2f}"):
+        c1, c2 = st.columns(2)
+        with c1:
+            st.write(f"MA150: **${ma:.2f}**")
+            st.write(f"Vol: {vol_display}M")
+        with c2:
+            if ma > 0:
+                d = ((cp - ma)/ma)*100
+                clr = "green" if d>0 else "red"
+                st.markdown(f"vs MA: :{clr}[{d:+.2f}%]")
+        
+        if info:
+            render_chart(info['hist'], "")
+
 # ==========================================
 # 5. UI PAGES
 # ==========================================
@@ -226,7 +262,7 @@ def auth_page():
                     st.rerun()
                 else: st.error("Access Denied")
             
-            st.markdown('<div class="divider-text">OR CONNECT WITH</div>', unsafe_allow_html=True)
+            st.markdown("<br>", unsafe_allow_html=True)
             c1, cg, ca, cl, c2 = st.columns([1, 1, 1, 1, 1])
             with cg: st.button("G", key="g")
             with ca: st.button("", key="a")
@@ -241,6 +277,7 @@ def auth_page():
                 else: st.error("Error")
 
 def dashboard_page():
+    # Ticker
     metrics = get_top_metrics()
     tape_html = ""
     for k, v in metrics.items():
@@ -248,7 +285,7 @@ def dashboard_page():
         tape_html += f'<div class="ticker-item">{k}: <span style="color:{color}">{v[0]:,.2f} ({v[1]:+.2f}%)</span></div>'
     st.markdown(f'<div class="ticker-wrap"><div class="ticker-move">{tape_html * 3}</div></div>', unsafe_allow_html=True)
 
-    # Header with LOGO
+    # Header
     c1, c2 = st.columns([8, 1])
     with c1:
         st.markdown("""
@@ -257,7 +294,6 @@ def dashboard_page():
             <div class="dashboard-sub">LIVE TERMINAL</div>
         </div>
         """, unsafe_allow_html=True)
-        
     with c2: 
         st.markdown("<br>", unsafe_allow_html=True)
         if st.button("LOGOUT"):
@@ -265,6 +301,7 @@ def dashboard_page():
             st.session_state.page = 'auth'
             st.rerun()
 
+    # Metrics Cards
     cols = st.columns(4)
     i = 0
     for k, v in metrics.items():
@@ -280,8 +317,10 @@ def dashboard_page():
         i += 1
     st.markdown("---")
 
+    # Workspace
     col_setup, col_list = st.columns([1.2, 1.8], gap="large")
 
+    # --- LEFT: SETUP ---
     with col_setup:
         st.markdown("### ⚡ QUICK ACTION")
         with st.container(border=True):
@@ -325,110 +364,4 @@ def dashboard_page():
             s_max = curr * 3 if curr > 0 else 1000.0
             
             st.number_input("MANUAL PRICE ($)", value=float(st.session_state.target_price), step=0.5, key="inp_val", on_change=update_from_input)
-            st.slider("FINE TUNE", min_value=0.0, max_value=s_max, value=float(st.session_state.target_price), step=0.1, key="sld_val", on_change=update_from_slider)
-            
-            final_target = st.session_state.target_price
-            st.markdown(f"**ORDER PRICE:** <span style='color:#FF7F50; font-size:1.2rem; font-family:JetBrains Mono'>${final_target:.2f}</span>", unsafe_allow_html=True)
-            
-            vol = st.number_input("MIN VOL (M)", value=5, step=1)
-            
-            if st.button("ACTIVATE ALERT", use_container_width=True):
-                if symbol and final_target > 0:
-                    min_p = final_target if final_target < curr else 0
-                    max_p = final_target if final_target > curr else 0
-                    save_alert(symbol, min_p, max_p, vol*1000000, True)
-
-    with col_list:
-        h1, h2 = st.columns([3, 1])
-        with h1: st.markdown("### 📋 WATCHLIST")
-        with h2: 
-            if st.button("ARCHIVE"): 
-                st.session_state.page = 'archive'
-                st.rerun()
-
-        sh = get_worksheet("Rules")
-        if sh:
-            try:
-                data = sh.get_all_records()
-                if data:
-                    df = pd.DataFrame(data)
-                    uc = 'user_email' if 'user_email' in df.columns else 'email'
-                    
-                    if uc in df.columns and 'status' in df.columns:
-                        my_df = df[(df[uc] == st.session_state.user_email) & (df['status'] == 'Active')]
-                        
-                        if my_df.empty:
-                            st.info("NO ACTIVE ALERTS")
-                        else:
-                            for i, row in my_df.iterrows():
-                                sym = row['symbol']
-                                
-                                # --- FLATTENED DATA EXTRACTION (NO SYNTAX ERROR) ---
-                                t_max = safe_float(row.get('max_price'))
-                                t_min = safe_float(row.get('min_price'))
-                                
-                                target = 0.0
-                                if t_max > 0:
-                                    target = t_max
-                                else:
-                                    target = t_min
-                                
-                                v_raw = safe_float(row.get('min_volume'))
-                                vol_display = str(v_raw)[:2]
-
-                                # Separated logic call
-                                stock_info = get_stock_analysis(sym)
-                                
-                                cp = 0.0
-                                ma = 0.0
-                                if stock_info:
-                                    cp = stock_info['price']
-                                    ma = stock_info['ma150']
-                                
-                                with st.expander(f"{sym} | TGT: ${target} | NOW: ${cp:.2f}"):
-                                    c1, c2 = st.columns(2)
-                                    with c1:
-                                        st.write(f"MA150: **${ma:.2f}**")
-                                        st.write(f"Vol: {vol_display}M")
-                                    with c2:
-                                        if ma > 0:
-                                            d = ((cp - ma)/ma)*100
-                                            clr = "green" if d>0 else "red"
-                                            st.markdown(f"vs MA: :{clr}[{d:+.2f}%]")
-                                    
-                                    if stock_info:
-                                        render_chart(stock_info['hist'], "")
-                                        
-            except Exception as e: st.error(f"List Error: {e}")
-
-def archive_page():
-    st.title("🗄️ ARCHIVE")
-    if st.button("BACK"): 
-        st.session_state.page = 'dashboard'
-        st.rerun()
-    st.markdown("---")
-    sh = get_worksheet("Rules")
-    if sh:
-        try:
-            df = pd.DataFrame(sh.get_all_records())
-            if not df.empty and 'user_email' in df.columns:
-                adf = df[(df['user_email'] == st.session_state.user_email) & (df['status'] != 'Active')]
-                for i, row in adf.iterrows():
-                    st.markdown(f"""
-                    <div style="background:#111; padding:10px; border-bottom:1px solid #333; display:flex; justify-content:space-between;">
-                        <span><b style="color:#FF7F50">{row['symbol']}</b> <span style="color:#666; font-size:0.8rem;">{row['created_at']}</span></span>
-                        <span>{row['status']}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-        except: pass
-
-# ==========================================
-# 6. RUN
-# ==========================================
-apply_terminal_css()
-
-if st.session_state.logged_in:
-    if st.session_state['page'] == 'archive': archive_page()
-    else: dashboard_page()
-else:
-    auth_page()
+            st.slider("FINE TUNE", min_value=0.0, max_value=s_max, value=float(st.session_state.target_price), step=0.1, key="sld_val", on_change=update_from_
