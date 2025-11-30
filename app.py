@@ -24,87 +24,84 @@ def apply_custom_css():
             font-family: 'Heebo', sans-serif;
         }
         
-        /* --- כותרות ראשיות (H1) --- */
+        /* --- 1. כותרות ראשיות --- */
         h1 {
-            font-size: 3.5rem !important;  /* ענק */
-            font-weight: 900 !important;   /* מודגש מאוד */
-            color: #FFFFFF !important;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            margin-bottom: 20px !important;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5); /* צל עדין לקריאות */
+            font-size: 3rem !important;
+            font-weight: 900 !important;
+            color: #FFF;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
         }
-        
-        /* --- כותרות משניות (H2) - כמו 'Create Alert' --- */
         h2 {
-            font-size: 2.2rem !important;
+            font-size: 2rem !important;
             font-weight: 700 !important;
-            color: #FAFAFA !important;
-            border-bottom: 2px solid #FF4B4B; /* פס אדום מתחת לכותרת */
-            padding-bottom: 10px;
-            margin-top: 30px !important;
-            margin-bottom: 20px !important;
+            border-bottom: 2px solid #FF4B4B;
+            padding-bottom: 5px;
+            margin-top: 20px;
         }
-        
-        /* --- כותרות רמה 3 (H3) --- */
         h3 {
             font-size: 1.5rem !important;
-            font-weight: 600 !important;
-            color: #E0E0E0 !important;
+            font-weight: 600;
+        }
+
+        /* --- 2. עיצוב המדדים (Metrics Dashboard) - התיקון החדש! --- */
+        
+        /* הקופסה עצמה */
+        div[data-testid="stMetric"] {
+            background-color: #1E1E1E; /* רקע כהה מאוד */
+            border: 1px solid #333;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            text-align: center; /* מרכוז הטקסט */
+            transition: 0.3s;
         }
         
-        /* --- עיצוב כרטיס מניה --- */
+        div[data-testid="stMetric"]:hover {
+            border-color: #FF4B4B; /* מסגרת אדומה במעבר עכבר */
+            transform: scale(1.02); /* הגדלה עדינה */
+        }
+
+        /* הכותרת של המדד (למשל S&P 500) */
+        div[data-testid="stMetricLabel"] p {
+            font-size: 1.1rem !important;
+            color: #AAAAAA !important;
+            font-weight: bold;
+        }
+
+        /* המספר הגדול (המחיר) */
+        div[data-testid="stMetricValue"] div {
+            font-size: 2.2rem !important; /* ענק! */
+            font-weight: 900 !important;
+            color: #FFFFFF !important;
+        }
+
+        /* האחוזים (השינוי) */
+        div[data-testid="stMetricDelta"] div {
+            font-size: 1rem !important;
+            font-weight: bold;
+        }
+
+        /* --- 3. עיצוב כרטיסי המניות (Watchlist) --- */
         div.stock-card {
             background-color: #262730;
             border: 1px solid #444;
-            padding: 20px; /* יותר מרווח פנימי */
+            padding: 20px;
             border-radius: 12px;
             margin-bottom: 15px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-            transition: 0.3s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-        div.stock-card:hover {
-            border-color: #FF4B4B;
-            transform: translateY(-5px);
-            box-shadow: 0 8px 16px rgba(255, 75, 75, 0.2);
-        }
-        
-        /* --- כותרת המניה בתוך הכרטיס --- */
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid #555;
-            padding-bottom: 12px;
-            margin-bottom: 12px;
-        }
-        
-        /* הגדלה משמעותית של שם המניה (NVDA וכו') */
         .symbol-text {
             color: #FF4B4B; 
             font-weight: 900; 
-            font-size: 1.8rem; /* גדול וברור */
-            letter-spacing: 1px;
+            font-size: 1.8rem;
         }
-        
         .status-badge {
-            background: #444; 
-            padding: 4px 10px; 
-            border-radius: 6px; 
-            font-size: 0.9em;
-            font-weight: bold;
-            color: #fff;
+            background: #444; padding: 4px 10px; border-radius: 6px; 
+            font-size: 0.9em; font-weight: bold; color: #fff;
         }
-
-        .card-metric {
-            font-size: 1rem; /* הגדלתי גם את הטקסט הקטן */
-            color: #bbb;
-        }
-        .card-value {
-            font-size: 1.4em; /* המספרים גדולים יותר */
-            font-weight: bold;
-            color: #fff;
-        }
+        .card-metric { font-size: 1rem; color: #bbb; }
+        .card-value { font-size: 1.4em; font-weight: bold; color: #fff; }
+        
         </style>
     """, unsafe_allow_html=True)
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
@@ -204,15 +201,21 @@ def get_real_time_price(symbol):
 # 5. רכיבי UI חדשים (New Components)
 # ==========================================
 def show_metrics_bar():
+    st.markdown("### 🌍 Live Market Data") # כותרת אזור המדדים
+    
     metrics = get_market_metrics()
     c1, c2, c3, c4 = st.columns(4)
+    
     def d(col, lbl, k):
         v, c = metrics.get(k, (0,0))
+        # השינוי העיצובי קורה אוטומטית בגלל ה-CSS שהזרקנו למעלה
         col.metric(lbl, f"{v:,.2f}", f"{c:+.2f}%")
+
     d(c1, "🇺🇸 S&P 500", "S&P 500")
     d(c2, "💾 NASDAQ", "NASDAQ")
     d(c3, "₿ Bitcoin", "Bitcoin")
     d(c4, "😨 VIX", "VIX")
+    
     st.markdown("---")
 
 def show_chart(ticker):
@@ -371,4 +374,5 @@ if __name__ == "__main__":
         main_app()
     else:
         login_screen_tabs()
+
 
