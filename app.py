@@ -9,395 +9,387 @@ import hashlib
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. עיצוב ו-CSS (כותרות ברורות, כפתורים תכולים)
+# PAGE CONFIG
 # ==========================================
-st.set_page_config(page_title="StockPulse", layout="wide", page_icon="📈")
+st.set_page_config(
+    page_title="StockPulse - Real-Time Market Alerts",
+    layout="wide",
+    page_icon="📈",
+    initial_sidebar_state="collapsed"
+)
 
-def apply_custom_css():
+# ==========================================
+# PREMIUM CSS - TRADINGVIEW INSPIRED
+# ==========================================
+def apply_premium_css():
     st.markdown("""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
         
-        /* --- רקע כללי שחור --- */
+        * {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* ========================================
+           GLOBAL STYLES
+        ======================================== */
         .stApp {
-            background-color: #000000;
-            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
             color: #FFFFFF;
         }
         
-        /* --- כותרות ברורות (ללא שקיפות) --- */
-        .main-title {
-            font-size: 3.5rem;
-            font-weight: 900;
-            color: #FFFFFF !important; /* לבן מלא */
-            opacity: 1 !important;
-            line-height: 1.1;
-            text-shadow: 0px 0px 10px rgba(0,0,0,0.5);
+        /* REMOVE STREAMLIT ELEMENTS */
+        #MainMenu {visibility: hidden;}
+        footer {visibility: hidden;}
+        header {visibility: hidden;}
+        .stDeployButton {display: none;}
+        div[data-testid="stToolbar"] {display: none;}
+        
+        /* ========================================
+           AUTH PAGE (LOGIN/SIGNUP)
+        ======================================== */
+        .auth-container {
+            max-width: 440px;
+            margin: 60px auto;
+            padding: 48px 40px;
+            background: rgba(20, 25, 35, 0.95);
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 
+                0 20px 60px rgba(0, 0, 0, 0.5),
+                0 0 100px rgba(255, 107, 107, 0.1);
+            backdrop-filter: blur(20px);
         }
-        .sub-title {
-            font-size: 1.2rem;
-            color: #E0E0E0 !important; /* אפור בהיר מאוד */
-            font-weight: 400;
-            margin-bottom: 30px;
-        }
-        .divider-text {
+        
+        .logo-container {
             text-align: center;
-            color: #BBBBBB;
-            font-size: 0.9rem;
-            margin: 30px 0 20px 0;
-        }
-
-        /* --- שדות קלט --- */
-        div[data-testid="stTextInput"] > div > div {
-            background-color: #F0F2F6 !important;
-            border-radius: 8px;
-            border: none;
-            color: #333 !important;
-        }
-        input[type="text"], input[type="password"] {
-            color: #333 !important;
+            margin-bottom: 40px;
         }
         
-        /* --- כפתורים ראשיים (כתום) --- */
-        div.stButton > button {
-            background-color: #FF7F50; 
-            color: white;
-            border-radius: 8px;
-            border: none;
-            padding: 12px 0;
-            font-weight: bold;
-            font-size: 16px;
-            width: 100%;
-            transition: 0.3s;
+        .logo-title {
+            font-size: 2.8rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #FF6B6B 0%, #FFB88C 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -1.5px;
+            margin-bottom: 8px;
         }
-        div.stButton > button:hover {
-            background-color: #FF6347;
-            box-shadow: 0px 0px 15px rgba(255, 127, 80, 0.5);
-        }
-
-        /* --- כפתורי סושיאל (ריבועים תכולים) --- */
-        /* אנו נשתמש ב-Key ספציפי או במיקום העמודות כדי לצבוע אותם */
         
-        /* תכלת עדין לכל שלושת הכפתורים בשורת הסושיאל */
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button,
-        div[data-testid="column"]:nth-of-type(3) div.stButton > button,
-        div[data-testid="column"]:nth-of-type(4) div.stButton > button {
-            background-color: #4FC3F7 !important; /* תכלת עדין */
-            color: #FFFFFF !important; /* אייקון לבן */
-            border: none !important;
-            font-size: 26px !important;
-            font-weight: 900 !important; /* בולד */
+        .logo-subtitle {
+            color: #8B92A7;
+            font-size: 0.95rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+        
+        /* TABS */
+        .stTabs {
+            margin-bottom: 32px;
+        }
+        
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 0;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            padding: 4px;
+        }
+        
+        .stTabs [data-baseweb="tab"] {
+            height: 48px;
+            background: transparent;
+            border-radius: 10px;
+            color: #6B7280;
+            font-size: 15px;
+            font-weight: 600;
+            border: none;
+            padding: 0 28px;
+            transition: all 0.3s ease;
+        }
+        
+        .stTabs [data-baseweb="tab"]:hover {
+            color: #FF6B6B;
+        }
+        
+        .stTabs [aria-selected="true"] {
+            background: linear-gradient(135deg, rgba(255, 107, 107, 0.15) 0%, rgba(255, 184, 140, 0.15) 100%) !important;
+            color: #FF6B6B !important;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+        }
+        
+        /* INPUT FIELDS */
+        .stTextInput > label {
+            color: #D1D5DB !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            margin-bottom: 8px !important;
+            letter-spacing: 0.3px !important;
+        }
+        
+        .stTextInput > div > div > input {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
             border-radius: 12px !important;
-            height: 60px !important; /* גובה קבוע ליצירת ריבוע */
-            padding: 0 !important;
+            color: #FFFFFF !important;
+            padding: 14px 16px !important;
+            font-size: 15px !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        .stTextInput > div > div > input:focus {
+            border: 1.5px solid #FF6B6B !important;
+            background: rgba(255, 107, 107, 0.05) !important;
+            box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.1) !important;
+        }
+        
+        .stTextInput > div > div > input::placeholder {
+            color: #6B7280 !important;
+        }
+        
+        /* PRIMARY BUTTON */
+        .stButton > button {
+            background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important;
+            color: #FFFFFF !important;
+            border: none !important;
+            border-radius: 12px !important;
+            padding: 16px 0 !important;
+            font-weight: 700 !important;
+            font-size: 15px !important;
+            width: 100% !important;
+            text-transform: uppercase !important;
+            letter-spacing: 1px !important;
+            transition: all 0.3s ease !important;
+            box-shadow: 0 8px 20px rgba(255, 107, 107, 0.3) !important;
+        }
+        
+        .stButton > button:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 12px 28px rgba(255, 107, 107, 0.4) !important;
+        }
+        
+        .stButton > button:active {
+            transform: translateY(0) !important;
+        }
+        
+        /* SOCIAL DIVIDER */
+        .social-divider {
+            text-align: center;
+            color: #4B5563;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 32px 0 24px 0;
+            position: relative;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .social-divider::before,
+        .social-divider::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 42%;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .social-divider::before { left: 0; }
+        .social-divider::after { right: 0; }
+        
+        /* SOCIAL BUTTONS */
+        div[data-testid="column"] .stButton > button[key*="social"] {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            padding: 14px !important;
+            color: #FFFFFF !important;
+            font-size: 20px !important;
+            font-weight: 700 !important;
+            box-shadow: none !important;
+            text-transform: none !important;
+            letter-spacing: 0 !important;
+        }
+        
+        div[data-testid="column"] .stButton > button[key*="social"]:hover {
+            background: rgba(255, 255, 255, 0.08) !important;
+            border-color: rgba(255, 107, 107, 0.3) !important;
+            transform: translateY(-2px) !important;
+        }
+        
+        /* ========================================
+           DASHBOARD PAGE
+        ======================================== */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 24px 0;
+            margin-bottom: 32px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        
+        .dashboard-title {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: #FFFFFF;
+            letter-spacing: -1px;
+        }
+        
+        /* MARKET METRICS */
+        .metric-card {
+            background: linear-gradient(135deg, rgba(30, 35, 50, 0.8) 0%, rgba(20, 25, 35, 0.9) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            padding: 24px 20px;
+            text-align: center;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .metric-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #FF6B6B, #FFB88C);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-6px);
+            border-color: rgba(255, 107, 107, 0.3);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .metric-card:hover::before {
+            opacity: 1;
+        }
+        
+        .metric-label {
+            color: #8B92A7;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-bottom: 12px;
+        }
+        
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 900;
+            color: #FFFFFF;
+            margin: 8px 0;
+            letter-spacing: -0.5px;
+        }
+        
+        .metric-change {
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+        
+        .metric-positive { 
+            color: #10B981;
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+        
+        .metric-negative { 
+            color: #EF4444;
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        /* ALERT PANEL */
+        .alert-panel {
+            background: linear-gradient(135deg, rgba(30, 35, 50, 0.9) 0%, rgba(20, 25, 35, 0.95) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 32px 28px;
+            height: 100%;
+            backdrop-filter: blur(10px);
+        }
+        
+        .panel-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #FFFFFF;
+            margin-bottom: 28px;
             display: flex;
             align-items: center;
-            justify-content: center;
-            background-image: none !important; /* ביטול גרדיאנטים קודמים */
+            gap: 12px;
+            letter-spacing: -0.5px;
         }
-
-        /* אפקט הובר לריבועים */
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button:hover,
-        div[data-testid="column"]:nth-of-type(3) div.stButton > button:hover,
-        div[data-testid="column"]:nth-of-type(4) div.stButton > button:hover {
-            background-color: #29B6F6 !important; /* תכלת מעט כהה יותר */
-            transform: scale(1.05);
-        }
-
-        /* --- טאבים --- */
-        .stTabs [data-baseweb="tab-list"] { gap: 20px; margin-bottom: 20px; }
-        .stTabs [data-baseweb="tab"] {
-            height: 50px; white-space: pre-wrap; background-color: transparent;
-            border-radius: 0px; color: #888; font-size: 1.2rem; font-weight: 700; border: none;
-        }
-        .stTabs [aria-selected="true"] {
-            color: #FF7F50 !important; border-bottom: 3px solid #FF7F50;
-        }
-
-        #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
-        </style>
-    """, unsafe_allow_html=True)
-
-# ניהול סטייט
-if 'page' not in st.session_state: st.session_state['page'] = 'auth'
-if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
-if 'user_email' not in st.session_state: st.session_state['user_email'] = None
-
-# ==========================================
-# 2. לוגיקה ו-DB (ללא שינוי)
-# ==========================================
-def get_client():
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    try:
-        if "gcp_service_account" in st.secrets:
-            creds_dict = dict(st.secrets["gcp_service_account"])
-            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        else:
-            creds = ServiceAccountCredentials.from_json_keyfile_name("secrets.json", scope)
-        return gspread.authorize(creds)
-    except: return None
-
-def get_worksheet(sheet_name):
-    client = get_client()
-    if client:
-        try: return client.open("StockWatcherDB").worksheet(sheet_name)
-        except: return None
-    return None
-
-def make_hashes(password):
-    return hashlib.sha256(str.encode(password)).hexdigest()
-
-def check_hashes(password, hashed_text):
-    if make_hashes(password) == hashed_text: return hashed_text
-    return False
-
-def add_user_to_db(email, password, phone):
-    sheet = get_worksheet("USERS")
-    if not sheet: return False
-    try:
-        df = pd.DataFrame(sheet.get_all_records())
-        if not df.empty and 'email' in df.columns and email in df['email'].values:
-            st.warning("User already exists.")
-            return False
-    except: pass
-    hashed_pw = make_hashes(password)
-    row = [email, hashed_pw, str(datetime.now()), phone]
-    sheet.append_row(row)
-    return True
-
-def login_user(email, password):
-    sheet = get_worksheet("USERS")
-    if not sheet: return False
-    try:
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        if df.empty: return False
-        user_row = df[df['email'] == email]
-        if user_row.empty: return False
-        stored_hash = user_row.iloc[0]['password']
-        if check_hashes(password, stored_hash): return True
-    except: pass
-    return False
-
-# ==========================================
-# 3. נתוני שוק
-# ==========================================
-@st.cache_data(ttl=60)
-def get_market_metrics():
-    tickers = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "Bitcoin": "BTC-USD", "VIX": "^VIX"}
-    data = {}
-    for name, symbol in tickers.items():
-        try:
-            t = yf.Ticker(symbol)
-            h = t.history(period="5d")
-            if len(h) >= 2:
-                curr = h['Close'].iloc[-1]
-                prev = h['Close'].iloc[-2]
-                chg = ((curr - prev) / prev) * 100
-                data[name] = (curr, chg)
-            else: data[name] = (0.0, 0.0)
-        except: data[name] = (0.0, 0.0)
-    return data
-
-def get_real_time_price(symbol):
-    if not symbol: return None
-    try: return yf.Ticker(symbol).history(period="1d")['Close'].iloc[-1]
-    except: return None
-
-def save_alert(ticker, min_p, max_p, vol, one_time):
-    sheet = get_worksheet("Rules")
-    if not sheet: return
-    row = [st.session_state.user_email, ticker, min_p if min_p>0 else "", max_p if max_p>0 else "", vol, str(datetime.now()), "TRUE" if one_time else "FALSE", "Active"]
-    try:
-        sheet.append_row(row)
-        st.toast(f"✅ Alert Set: {ticker}", icon="🔥")
-        time.sleep(1)
-        st.rerun()
-    except Exception as e: st.error(f"Save Error: {e}")
-
-def navigate_to(page):
-    st.session_state['page'] = page
-    st.rerun()
-
-def show_chart(ticker):
-    try:
-        data = yf.Ticker(ticker).history(period="1mo")
-        fig = go.Figure(data=[go.Candlestick(x=data.index, open=data['Open'], high=data['High'], low=data['Low'], close=data['Close'])])
-        fig.update_layout(height=200, margin=dict(l=0, r=0, t=10, b=0), paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', xaxis_rangeslider_visible=False)
-        st.plotly_chart(fig, use_container_width=True)
-    except: st.caption("Chart unavailable")
-
-# ==========================================
-# 4. מסך התחברות (מעודכן: כותרות ברורות וכפתורים תכולים)
-# ==========================================
-def auth_page():
-    col_img, col_form = st.columns([1.5, 1])
-    
-    with col_img:
-        try: st.image("login_image.png", use_container_width=True)
-        except: st.warning("Image 'login_image.png' not found.")
-
-    with col_form:
-        st.markdown("<br>", unsafe_allow_html=True)
-        # כותרות בלבן מלא (מוגדר ב-CSS)
-        st.markdown('<div class="main-title">STOCKPULSE</div>', unsafe_allow_html=True)
-        st.markdown('<div class="sub-title">Real-Time Market Alerts</div>', unsafe_allow_html=True)
         
-        tab_login, tab_signup = st.tabs(["LOG IN", "SIGN UP"])
+        .panel-title::before {
+            content: "";
+            width: 4px;
+            height: 24px;
+            background: linear-gradient(180deg, #FF6B6B, #FFB88C);
+            border-radius: 2px;
+        }
         
-        with tab_login:
-            st.markdown("<br>", unsafe_allow_html=True)
-            l_email = st.text_input("Email Address", key="l_email")
-            l_pass = st.text_input("Password", type="password", key="l_pass")
-            
-            st.markdown('<div style="text-align:right; color:#888; font-size:0.9rem; cursor:pointer;">Forgot Password?</div>', unsafe_allow_html=True)
-            st.markdown("<br>", unsafe_allow_html=True)
-            
-            if st.button("LOG IN"):
-                if login_user(l_email, l_pass):
-                    st.session_state.user_email = l_email
-                    st.session_state.logged_in = True
-                    navigate_to('dashboard')
-                else:
-                    st.error("Invalid Credentials")
-            
-            st.markdown('<div class="divider-text">— OR CONTINUE WITH —</div>', unsafe_allow_html=True)
-            
-            # עמודות מכווצות לכפתורים מרובעים
-            gap1, col_g, col_a, col_l, gap2 = st.columns([2, 1, 1, 1, 2])
-            
-            # כל הכפתורים יקבלו את עיצוב התכלת + לבן בולד מה-CSS
-            with col_g: st.button("G", key="icon_g", help="Google")
-            with col_a: st.button("", key="icon_a", help="Apple")
-            with col_l: st.button("in", key="icon_l", help="LinkedIn")
-
-        with tab_signup:
-            st.markdown("<br>", unsafe_allow_html=True)
-            s_email = st.text_input("New Email", key="s_email")
-            s_pass = st.text_input("Create Password", type="password", key="s_pass")
-            s_phone = st.text_input("WhatsApp Number", placeholder="+972...", key="s_phone")
-            
-            st.markdown("<br>", unsafe_allow_html=True)
-            if st.button("CREATE ACCOUNT"):
-                if add_user_to_db(s_email, s_pass, s_phone):
-                    st.success("Account created successfully!")
-                    time.sleep(1)
-                    st.balloons()
-
-# ==========================================
-# 5. דאשבורד (תקין)
-# ==========================================
-def dashboard_page():
-    c1, c2 = st.columns([6, 1])
-    with c1: st.title("Dashboard")
-    with c2: 
-        if st.button("Log Out"):
-            st.session_state.logged_in = False
-            navigate_to('auth')
-            
-    metrics = get_market_metrics()
-    m_cols = st.columns(4)
-    keys = ["S&P 500", "NASDAQ", "Bitcoin", "VIX"]
-    for i, key in enumerate(keys):
-        val, chg = metrics.get(key, (0,0))
-        color = "#00CC96" if chg >= 0 else "#EF553B"
-        with m_cols[i]:
-            st.markdown(f"""
-            <div style="background:#111; padding:15px; border-radius:10px; text-align:center; border:1px solid #333;">
-                <div style="color:#888; font-size:0.8rem;">{key}</div>
-                <div style="font-size:1.5rem; font-weight:bold;">{val:,.2f}</div>
-                <div style="color:{color}; font-weight:bold;">{chg:+.2f}%</div>
-            </div>
-            """, unsafe_allow_html=True)
-    st.markdown("---")
-
-    col_setup, col_list = st.columns([1, 2])
-    with col_setup:
-        st.markdown("### 🔔 Create Alert")
-        with st.container(border=True):
-            tick = st.text_input("Ticker Symbol", value="NVDA").upper()
-            curr_price = 0.0
-            if tick:
-                curr_price = get_real_time_price(tick) or 0.0
-                st.caption(f"Current Price: ${curr_price:.2f}")
-
-            st.markdown("<strong>Target Price</strong>", unsafe_allow_html=True)
-            if 'slider_price' not in st.session_state: st.session_state.slider_price = curr_price
-            input_val = st.number_input("Price Input", value=float(st.session_state.slider_price), label_visibility="collapsed")
-            s_min = float(curr_price) * 0.5
-            s_max = float(curr_price) * 1.5
-            if s_max == 0: s_max = 100
-            final_target = st.slider("Fine Tune", min_value=s_min, max_value=s_max, value=input_val)
-            st.markdown("---")
-            min_vol = st.number_input("Min Volume (M)", value=5, step=1)
-            st.caption("✅ Alert sends to WhatsApp")
-            if st.button("SET ALERT"):
-                if tick:
-                    min_p = final_target if final_target < curr_price else 0
-                    max_p = final_target if final_target > curr_price else 0
-                    save_alert(tick, min_p, max_p, min_vol*1000000, True)
-
-    with col_list:
-        h1, h2 = st.columns([4, 1])
-        with h1: st.markdown("### 📋 Active Watchlist")
-        with h2: 
-            if st.button("Archive"): navigate_to('archive')
-
-        sh = get_worksheet("Rules")
-        if sh:
-            try:
-                df = pd.DataFrame(sh.get_all_records())
-                user_col = 'user_email' if 'user_email' in df.columns else 'email'
-                if not df.empty and user_col in df.columns:
-                    my_df = df[(df[user_col] == st.session_state.user_email) & (df['status'] == 'Active')]
-                    if my_df.empty: st.info("No active alerts.")
-                    else:
-                        grid = st.columns(2)
-                        for i, (idx, row) in enumerate(my_df.iterrows()):
-                            with grid[i % 2]:
-                                target = row['max_price'] if row['max_price'] else row['min_price']
-                                st.markdown(f"""
-                                <div class="stock-card">
-                                    <div style="display:flex; justify-content:space-between;">
-                                        <h3 style="margin:0; color:#FF7F50;">{row['symbol']}</h3>
-                                        <span style="color:#888;">{str(row['min_volume'])[:2]}M Vol</span>
-                                    </div>
-                                    <div style="font-size:1.2rem; margin-top:10px;">Target: <b>${target}</b></div>
-                                </div>
-                                """, unsafe_allow_html=True)
-                                with st.expander("Chart"): show_chart(row['symbol'])
-                else: st.info("No Data")
-            except: st.error("DB Error")
-
-# ==========================================
-# 6. ארכיון
-# ==========================================
-def archive_page():
-    st.title("🗄️ Archive")
-    if st.button("← Back"): navigate_to('dashboard')
-    st.markdown("---")
-    sh = get_worksheet("Rules")
-    if sh:
-        try:
-            df = pd.DataFrame(sh.get_all_records())
-            if not df.empty and 'user_email' in df.columns:
-                adf = df[(df['user_email'] == st.session_state.user_email) & (df['status'] != 'Active')]
-                for i, row in adf.iterrows():
-                    st.markdown(f"""
-                    <div class="archive-card">
-                        <b>{row['symbol']}</b> - {row['created_at']} <span style="float:right;">{row['status']}</span>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else: st.info("Empty Archive")
-        except: pass
-
-# ==========================================
-# 7. ראוטר ראשי
-# ==========================================
-apply_custom_css()
-
-if st.session_state.logged_in:
-    if st.session_state['page'] == 'archive': archive_page()
-    else: dashboard_page()
-else:
-    auth_page()
+        /* NUMBER INPUT */
+        .stNumberInput > label {
+            color: #D1D5DB !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            margin-bottom: 8px !important;
+        }
+        
+        .stNumberInput > div > div > input {
+            background: rgba(255, 255, 255, 0.04) !important;
+            border: 1.5px solid rgba(255, 255, 255, 0.1) !important;
+            border-radius: 12px !important;
+            color: #FFFFFF !important;
+            font-weight: 600 !important;
+        }
+        
+        /* SLIDER */
+        .stSlider > label {
+            color: #D1D5DB !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+        }
+        
+        .stSlider > div > div > div > div {
+            background: linear-gradient(90deg, #FF6B6B, #FFB88C) !important;
+        }
+        
+        .stSlider > div > div > div > div > div {
+            background: #FFFFFF !important;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4) !important;
+        }
+        
+        /* STOCK CARD */
+        .stock-card {
+            background: linear-gradient(135deg, rgba(40, 45, 65, 0.6) 0%, rgba(30, 35, 50, 0.8) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stock-card::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 4px;
+            background: linear-gradient(180deg, #FF6B6B, #FFB88C);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .stock-card:hover {
+            border-color:
