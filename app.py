@@ -25,7 +25,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# PREMIUM CSS - COMPLETE & FIXED
+# PREMIUM CSS
 # ==========================================
 def apply_premium_css():
     st.markdown("""
@@ -36,20 +36,17 @@ def apply_premium_css():
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
         
-        /* GLOBAL */
         .stApp {
             background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 50%, #16213e 100%);
             color: #FFFFFF;
         }
         
-        /* REMOVE STREAMLIT BRANDING */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
         .stDeployButton {display: none;}
         div[data-testid="stToolbar"] {display: none;}
         
-        /* VERSION BADGE */
         .version-badge {
             position: fixed;
             bottom: 20px;
@@ -64,15 +61,8 @@ def apply_premium_css():
             letter-spacing: 0.5px;
             z-index: 9999;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
         }
         
-        .version-badge:hover {
-            background: rgba(255, 107, 107, 0.1);
-            border-color: #FF6B6B;
-        }
-        
-        /* AUTH PAGE VERSION */
         .auth-version {
             text-align: center;
             margin-top: 24px;
@@ -80,20 +70,6 @@ def apply_premium_css():
             font-size: 0.75rem;
             font-weight: 500;
             letter-spacing: 1px;
-        }
-        
-        /* ========================================
-           AUTH PAGE - HIGH CONTRAST
-        ======================================== */
-        .auth-container {
-            max-width: 440px;
-            margin: 60px auto;
-            padding: 48px 40px;
-            background: rgba(15, 20, 30, 0.98);
-            border-radius: 24px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(20px);
         }
         
         .logo-title {
@@ -116,7 +92,6 @@ def apply_premium_css():
             margin-bottom: 40px;
         }
         
-        /* TABS - BETTER CONTRAST */
         .stTabs [data-baseweb="tab-list"] {
             gap: 0;
             background: rgba(255, 255, 255, 0.05);
@@ -142,7 +117,6 @@ def apply_premium_css():
             box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
         }
         
-        /* INPUT FIELDS - HIGH CONTRAST */
         .stTextInput > label {
             color: #E5E7EB !important;
             font-size: 14px !important;
@@ -166,7 +140,6 @@ def apply_premium_css():
             box-shadow: 0 0 0 3px rgba(255, 107, 107, 0.15) !important;
         }
         
-        /* PRIMARY BUTTON */
         .stButton > button {
             background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%) !important;
             color: #FFFFFF !important;
@@ -187,7 +160,6 @@ def apply_premium_css():
             box-shadow: 0 12px 28px rgba(255, 107, 107, 0.45) !important;
         }
         
-        /* SOCIAL DIVIDER - HIGH CONTRAST */
         .social-divider {
             text-align: center;
             color: #9CA3AF;
@@ -198,8 +170,7 @@ def apply_premium_css():
             letter-spacing: 1px;
         }
         
-        .social-divider::before,
-        .social-divider::after {
+        .social-divider::before, .social-divider::after {
             content: "";
             position: absolute;
             top: 50%;
@@ -211,17 +182,6 @@ def apply_premium_css():
         .social-divider::before { left: 0; }
         .social-divider::after { right: 0; }
         
-        /* ========================================
-           DASHBOARD
-        ======================================== */
-        .dashboard-title {
-            font-size: 2.2rem;
-            font-weight: 900;
-            color: #FFFFFF;
-            letter-spacing: -1px;
-        }
-        
-        /* METRIC CARDS */
         .metric-card {
             background: linear-gradient(135deg, rgba(25, 30, 45, 0.9) 0%, rgba(15, 20, 30, 0.95) 100%);
             border: 1px solid rgba(255, 255, 255, 0.08);
@@ -253,34 +213,10 @@ def apply_premium_css():
             margin: 8px 0;
         }
         
-        .metric-change {
-            font-size: 0.95rem;
-            font-weight: 700;
-        }
-        
+        .metric-change { font-size: 0.95rem; font-weight: 700; }
         .metric-positive { color: #10B981; }
         .metric-negative { color: #EF4444; }
         
-        /* ALERT PANEL */
-        .alert-panel {
-            background: linear-gradient(135deg, rgba(25, 30, 45, 0.95) 0%, rgba(15, 20, 30, 0.98) 100%);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 24px;
-            padding: 32px 28px;
-            height: 100%;
-        }
-        
-        .panel-title {
-            font-size: 1.4rem;
-            font-weight: 800;
-            color: #FFFFFF;
-            margin-bottom: 28px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-        
-        /* STOCK CARD */
         .stock-card {
             background: linear-gradient(135deg, rgba(35, 40, 60, 0.7) 0%, rgba(25, 30, 45, 0.9) 100%);
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -293,14 +229,12 @@ def apply_premium_css():
         .stock-card:hover {
             border-color: #FF6B6B;
             transform: translateX(4px);
-            box-shadow: -4px 0 20px rgba(255, 107, 107, 0.25);
         }
         
         .stock-symbol {
             font-size: 1.4rem;
             font-weight: 900;
             color: #FF6B6B;
-            margin: 0;
         }
         
         .stock-target {
@@ -314,7 +248,6 @@ def apply_premium_css():
             font-size: 0.85rem;
         }
         
-        /* NUMBER INPUT */
         .stNumberInput > label {
             color: #E5E7EB !important;
             font-size: 13px !important;
@@ -326,48 +259,20 @@ def apply_premium_css():
             border: 2px solid rgba(255, 255, 255, 0.15) !important;
             border-radius: 12px !important;
             color: #FFFFFF !important;
-            font-weight: 600 !important;
         }
         
-        /* SLIDER */
         .stSlider > label {
             color: #E5E7EB !important;
             font-size: 13px !important;
             font-weight: 600 !important;
         }
         
-        .stSlider > div > div > div > div {
-            background: linear-gradient(90deg, #FF6B6B, #FFB88C) !important;
-        }
-        
-        /* ARCHIVE CARD */
         .archive-card {
             background: rgba(25, 30, 45, 0.8);
             border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             padding: 20px 24px;
             margin-bottom: 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .status-badge {
-            padding: 6px 14px;
-            border-radius: 8px;
-            font-size: 0.75rem;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-        
-        .status-triggered {
-            background: rgba(16, 185, 129, 0.2);
-            color: #10B981;
-        }
-        
-        .status-expired {
-            background: rgba(251, 146, 60, 0.2);
-            color: #FB923C;
         }
         
         </style>
@@ -384,7 +289,7 @@ if 'user_email' not in st.session_state:
     st.session_state['user_email'] = None
 
 # ==========================================
-# GOOGLE SHEETS FUNCTIONS
+# GOOGLE SHEETS
 # ==========================================
 def get_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -401,4 +306,94 @@ def get_client():
 def get_worksheet(sheet_name):
     client = get_client()
     if client:
+        try: 
+            return client.open("StockWatcherDB").worksheet(sheet_name)
+        except: 
+            return None
+    return None
+
+def make_hashes(password):
+    return hashlib.sha256(str.encode(password)).hexdigest()
+
+def check_hashes(password, hashed_text):
+    return make_hashes(password) == hashed_text
+
+def add_user_to_db(email, password, phone):
+    sheet = get_worksheet("USERS")
+    if not sheet: 
+        return False
+    try:
+        df = pd.DataFrame(sheet.get_all_records())
+        if not df.empty and 'email' in df.columns and email in df['email'].values:
+            st.warning("User already exists.")
+            return False
+    except: 
+        pass
+    hashed_pw = make_hashes(password)
+    row = [email, hashed_pw, str(datetime.now()), phone]
+    sheet.append_row(row)
+    return True
+
+def login_user(email, password):
+    sheet = get_worksheet("USERS")
+    if not sheet: 
+        return False
+    try:
+        data = sheet.get_all_records()
+        df = pd.DataFrame(data)
+        if df.empty: 
+            return False
+        user_row = df[df['email'] == email]
+        if user_row.empty: 
+            return False
+        stored_hash = user_row.iloc[0]['password']
+        if check_hashes(password, stored_hash): 
+            return True
+    except: 
+        pass
+    return False
+
+# ==========================================
+# MARKET DATA
+# ==========================================
+@st.cache_data(ttl=60)
+def get_market_metrics():
+    tickers = {"S&P 500": "^GSPC", "NASDAQ": "^IXIC", "Bitcoin": "BTC-USD", "VIX": "^VIX"}
+    data = {}
+    for name, symbol in tickers.items():
         try:
+            t = yf.Ticker(symbol)
+            h = t.history(period="5d")
+            if len(h) >= 2:
+                curr = h['Close'].iloc[-1]
+                prev = h['Close'].iloc[-2]
+                chg = ((curr - prev) / prev) * 100
+                data[name] = (curr, chg)
+            else: 
+                data[name] = (0.0, 0.0)
+        except: 
+            data[name] = (0.0, 0.0)
+    return data
+
+def get_real_time_price(symbol):
+    if not symbol: 
+        return None
+    try: 
+        return yf.Ticker(symbol).history(period="1d")['Close'].iloc[-1]
+    except: 
+        return None
+
+def save_alert(ticker, min_p, max_p, vol, one_time):
+    sheet = get_worksheet("Rules")
+    if not sheet: 
+        return
+    row = [
+        st.session_state.user_email, 
+        ticker, 
+        min_p if min_p>0 else "", 
+        max_p if max_p>0 else "", 
+        vol, 
+        str(datetime.now()), 
+        "TRUE" if one_time else "FALSE", 
+        "Active"
+    ]
