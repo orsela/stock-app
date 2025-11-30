@@ -9,88 +9,95 @@ import hashlib
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. הגדרות מערכת ועיצוב (UI Layer - StockPulse Theme)
+# 1. הגדרות מערכת ועיצוב (StockPulse Black Theme)
 # ==========================================
 st.set_page_config(page_title="StockPulse", layout="wide", page_icon="📈")
 
 def apply_custom_css():
     st.markdown("""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700;900&display=swap');
         
-        html, body, [class*="css"] {
+        /* --- Global Black Theme --- */
+        .stApp {
+            background-color: #050505; /* Black background */
             font-family: 'Roboto', sans-serif;
-            background-color: #0E1117;
-            color: #FAFAFA;
+            color: #FFFFFF;
         }
         
-        /* --- כפתורים ראשיים (כתום StockPulse) --- */
+        /* --- Inputs --- */
+        div[data-baseweb="input"] {
+            background-color: #1A1A1A;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: white;
+        }
+        input { color: white !important; }
+        
+        /* --- Buttons (Orange) --- */
         div.stButton > button:first-child {
             background-color: #FF7F50; 
             color: white;
             border-radius: 8px;
             border: none;
-            padding: 10px 24px;
+            padding: 12px 24px;
             font-weight: bold;
+            font-size: 16px;
             transition: 0.3s;
             width: 100%;
         }
         div.stButton > button:first-child:hover {
             background-color: #FF6347;
-            box-shadow: 0px 4px 15px rgba(255, 127, 80, 0.4);
+            box-shadow: 0px 0px 15px rgba(255, 127, 80, 0.5);
         }
         
-        /* כפתור משני (Outline) */
-        button.secondary-btn {
-            background-color: transparent !important;
-            border: 1px solid #FF7F50 !important;
-            color: #FF7F50 !important;
+        /* --- Social Login Buttons (Dark) --- */
+        .social-btn {
+             background-color: #1A1A1A !important;
+             border: 1px solid #333 !important;
         }
 
-        /* --- כרטיסי התראה (Active) --- */
+        /* --- Cards (Dashboard) --- */
         .stock-card {
-            background-color: #262730;
+            background-color: #161616;
             padding: 20px;
             border-radius: 12px;
             border-left: 4px solid #FF7F50;
             margin-bottom: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-            transition: transform 0.2s;
-        }
-        .stock-card:hover {
-            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        /* --- כרטיסי ארכיון (Expired) --- */
+        /* --- Archive Cards --- */
         .archive-card {
-            background-color: #1E1E1E;
+            background-color: #111;
             padding: 15px;
             border-radius: 12px;
-            border-left: 4px solid #555;
+            border-left: 4px solid #444;
             margin-bottom: 10px;
-            color: #888;
+            color: #777;
         }
 
-        /* --- טיפוגרפיה --- */
-        h1, h2, h3 { font-weight: 700; letter-spacing: -0.5px; }
-        .metric-label { font-size: 0.9rem; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
-        .metric-value { font-size: 1.8rem; font-weight: 900; color: #fff; }
-        .metric-delta-pos { color: #00CC96; font-weight: bold; font-size: 0.9rem; }
-        .metric-delta-neg { color: #EF553B; font-weight: bold; font-size: 0.9rem; }
+        /* --- Text Utilities --- */
+        .main-title {
+            font-size: 3rem;
+            font-weight: 900;
+            background: -webkit-linear-gradient(#eee, #555);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
         
-        /* הסתרת אלמנטים דיפולטיביים */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
 
-# ניהול State לניווט
+# State Management
 if 'page' not in st.session_state: st.session_state['page'] = 'login'
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'user_email' not in st.session_state: st.session_state['user_email'] = None
 
 # ==========================================
-# 2. מודול חיבור ו-DB (ללא שינוי - הפונקציונליות המקורית)
+# 2. Backend Logic (Google Sheets & Auth)
 # ==========================================
 def get_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -101,27 +108,20 @@ def get_client():
         else:
             creds = ServiceAccountCredentials.from_json_keyfile_name("secrets.json", scope)
         return gspread.authorize(creds)
-    except Exception as e:
-        return None
+    except: return None
 
 def get_worksheet(sheet_name):
     client = get_client()
     if client:
-        try:
-            return client.open("StockWatcherDB").worksheet(sheet_name)
-        except:
-            return None
+        try: return client.open("StockWatcherDB").worksheet(sheet_name)
+        except: return None
     return None
 
-# ==========================================
-# 3. מודול הזדהות (ללא שינוי)
-# ==========================================
 def make_hashes(password):
     return hashlib.sha256(str.encode(password)).hexdigest()
 
 def check_hashes(password, hashed_text):
-    if make_hashes(password) == hashed_text:
-        return hashed_text
+    if make_hashes(password) == hashed_text: return hashed_text
     return False
 
 def add_user_to_db(email, password, phone):
@@ -148,13 +148,12 @@ def login_user(email, password):
         user_row = df[df['email'] == email]
         if user_row.empty: return False
         stored_hash = user_row.iloc[0]['password']
-        if check_hashes(password, stored_hash):
-            return True
+        if check_hashes(password, stored_hash): return True
     except: pass
     return False
 
 # ==========================================
-# 4. מנוע נתונים (Yahoo Finance)
+# 3. Market Data Engine
 # ==========================================
 @st.cache_data(ttl=60)
 def get_market_metrics():
@@ -175,8 +174,7 @@ def get_market_metrics():
 
 def get_real_time_price(symbol):
     if not symbol: return None
-    try:
-        return yf.Ticker(symbol).history(period="1d")['Close'].iloc[-1]
+    try: return yf.Ticker(symbol).history(period="1d")['Close'].iloc[-1]
     except: return None
 
 def save_alert(ticker, min_p, max_p, vol, one_time):
@@ -188,35 +186,14 @@ def save_alert(ticker, min_p, max_p, vol, one_time):
         st.toast(f"✅ Alert Set: {ticker}", icon="🔥")
         time.sleep(1)
         st.rerun()
-    except Exception as e:
-        st.error(f"Save Error: {e}")
+    except Exception as e: st.error(f"Save Error: {e}")
 
 # ==========================================
-# 5. רכיבי UI חדשים (New Components)
+# 4. Helper UI Functions
 # ==========================================
 def navigate_to(page):
     st.session_state['page'] = page
     st.rerun()
-
-def show_custom_metrics():
-    """סרגל מדדים בעיצוב נקי"""
-    metrics = get_market_metrics()
-    cols = st.columns(4)
-    keys = ["S&P 500", "NASDAQ", "Bitcoin", "VIX"]
-    
-    for i, key in enumerate(keys):
-        val, chg = metrics.get(key, (0,0))
-        color_class = "metric-delta-pos" if chg >= 0 else "metric-delta-neg"
-        arrow = "▲" if chg >= 0 else "▼"
-        with cols[i]:
-            st.markdown(f"""
-            <div style="background:#16171c; padding:15px; border-radius:10px; text-align:center;">
-                <div class="metric-label">{key}</div>
-                <div class="metric-value">{val:,.2f}</div>
-                <div class="{color_class}">{arrow} {chg:.2f}%</div>
-            </div>
-            """, unsafe_allow_html=True)
-    st.markdown("<br>", unsafe_allow_html=True)
 
 def show_chart(ticker):
     try:
@@ -228,60 +205,81 @@ def show_chart(ticker):
                           paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
                           xaxis_rangeslider_visible=False)
         st.plotly_chart(fig, use_container_width=True)
-    except:
-        st.caption("Chart unavailble")
+    except: st.caption("Chart unavailable")
 
 # ==========================================
-# 6. מסכים (Pages)
+# 5. PAGE: LOGIN (Updated Black Design)
 # ==========================================
-
-# --- מסך כניסה (Login) ---
 def login_page():
-    col1, col2 = st.columns([1.2, 1])
-    with col1:
-        st.markdown("<br><br><br>", unsafe_allow_html=True)
-        st.title("STOCKPULSE")
-        st.markdown("### Real-Time Market Intelligence.")
-        st.markdown("Join the traders who never miss a beat.")
-        
-    with col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        with st.container(border=True):
-            st.subheader("Log In")
-            email = st.text_input("Email", placeholder="name@example.com")
-            password = st.text_input("Password", type="password")
-            
-            if st.button("LOG IN"):
-                if login_user(email, password):
-                    st.session_state.user_email = email
-                    st.session_state.logged_in = True
-                    navigate_to('dashboard')
-                else:
-                    st.error("Invalid email or password")
-            
-            st.markdown("---")
-            if st.button("Create New Account", key="goto_signup"):
-                navigate_to('signup')
+    # Split Screen: Image (Left) | Form (Right)
+    col_img, col_form = st.columns([1.5, 1])
+    
+    with col_img:
+        # Load the uploaded image
+        try:
+            st.image("login_image.png", use_container_width=True)
+        except:
+            # Fallback if image is missing
+            st.warning("Please add 'login_image.png' to the folder.")
+            st.markdown("<h1>📊</h1>", unsafe_allow_html=True)
 
-# --- מסך הרשמה (Sign Up) ---
+    with col_form:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        st.markdown('<div class="main-title">STOCKPULSE</div>', unsafe_allow_html=True)
+        st.markdown("<p style='color:#888; margin-top:-10px;'>Real-Time Market Alerts</p>", unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        email = st.text_input("Email Address", placeholder="name@example.com")
+        password = st.text_input("Password", type="password", placeholder="••••••••")
+        
+        st.markdown("<div style='text-align: right; font-size: 0.8em; color: #888;'>Forgot Password?</div>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        if st.button("LOG IN"):
+            if login_user(email, password):
+                st.session_state.user_email = email
+                st.session_state.logged_in = True
+                navigate_to('dashboard')
+            else:
+                st.error("Invalid Credentials")
+
+        # Social Login Mockup
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align:center; color:#444; font-size:0.8em;'>— OR CONTINUE WITH —</div>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        b1, b2, b3 = st.columns(3)
+        with b1: st.button("G", key="g_login")
+        with b2: st.button("", key="a_login")
+        with b3: st.button("in", key="l_login")
+            
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        if st.button("Don't have an account? Sign Up", key="btn_signup"):
+            navigate_to('signup')
+
+# ==========================================
+# 6. PAGE: SIGN UP
+# ==========================================
 def signup_page():
-    col1, col2 = st.columns([1.2, 1])
+    col1, col2 = st.columns([1, 1])
     with col1:
         st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.title("Join StockPulse")
         st.markdown("### Get Alerts Directly to WhatsApp.")
+        st.markdown("Never miss a breakout again.")
         
     with col2:
         st.markdown("<br><br>", unsafe_allow_html=True)
         with st.container(border=True):
-            st.subheader("Sign Up")
+            st.subheader("Create Account")
             new_email = st.text_input("Email Address")
             new_pass = st.text_input("Create Password", type="password")
-            phone = st.text_input("WhatsApp Number", placeholder="+97250...")
+            phone = st.text_input("WhatsApp Number", placeholder="+972...")
             
             if st.button("SIGN UP"):
                 if add_user_to_db(new_email, new_pass, phone):
-                    st.success("Account Created! Please Log In.")
+                    st.success("Created! Please Log In.")
                     time.sleep(1.5)
                     navigate_to('login')
                 
@@ -289,104 +287,70 @@ def signup_page():
             if st.button("Back to Login", key="goto_login"):
                 navigate_to('login')
 
-# --- מסך ארכיון (Archive) ---
-def archive_page():
-    st.title("🗄️ Alert Archive")
-    if st.button("← Back to Dashboard"):
-        navigate_to('dashboard')
-    
-    st.markdown("---")
-    sh = get_worksheet("Rules")
-    if sh:
-        try:
-            df = pd.DataFrame(sh.get_all_records())
-            # סינון: רק המשתמש הנוכחי, ורק סטטוס שאינו Active
-            if not df.empty and 'user_email' in df.columns:
-                archive_df = df[(df['user_email'] == st.session_state.user_email) & (df['status'] != 'Active')]
-                
-                if archive_df.empty:
-                    st.info("Archive is empty.")
-                else:
-                    for i, row in archive_df.iterrows():
-                         st.markdown(f"""
-                        <div class="archive-card">
-                            <div style="display:flex; justify-content:space-between; align-items:center;">
-                                <div>
-                                    <strong style="font-size:1.2rem;">{row['symbol']}</strong>
-                                    <span style="margin-left:10px; font-size:0.9rem;">{row['created_at']}</span>
-                                </div>
-                                <div>
-                                    <span style="background:#333; padding:5px 10px; border-radius:5px;">{row['status']}</span>
-                                </div>
-                            </div>
-                        </div>
-                        """, unsafe_allow_html=True)
-            else:
-                st.info("No data found.")
-        except Exception as e:
-            st.error(f"Error loading archive: {e}")
-
-# --- מסך ראשי (Dashboard) ---
+# ==========================================
+# 7. PAGE: DASHBOARD
+# ==========================================
 def dashboard_page():
-    # כותרת עליונה
-    c1, c2 = st.columns([5, 1])
-    with c1: st.title("StockPulse Dashboard")
+    # Header
+    c1, c2 = st.columns([6, 1])
+    with c1: st.title("Dashboard")
     with c2: 
         if st.button("Log Out"):
             st.session_state.logged_in = False
             navigate_to('login')
             
-    show_custom_metrics()
-    
-    # חלוקה ראשית
+    # Metrics Bar
+    metrics = get_market_metrics()
+    m_cols = st.columns(4)
+    keys = ["S&P 500", "NASDAQ", "Bitcoin", "VIX"]
+    for i, key in enumerate(keys):
+        val, chg = metrics.get(key, (0,0))
+        color = "#00CC96" if chg >= 0 else "#EF553B"
+        with m_cols[i]:
+            st.markdown(f"""
+            <div style="background:#111; padding:15px; border-radius:10px; text-align:center; border:1px solid #333;">
+                <div style="color:#888; font-size:0.8rem;">{key}</div>
+                <div style="font-size:1.5rem; font-weight:bold;">{val:,.2f}</div>
+                <div style="color:{color}; font-weight:bold;">{chg:+.2f}%</div>
+            </div>
+            """, unsafe_allow_html=True)
+    st.markdown("---")
+
+    # Main Area
     col_setup, col_list = st.columns([1, 2])
     
-    # === צד שמאל: הגדרת התראה (עם גלגלת) ===
+    # Left: Alert Setup (Wheel/Slider)
     with col_setup:
         st.markdown("### 🔔 Create Alert")
         with st.container(border=True):
             tick = st.text_input("Ticker Symbol", value="NVDA").upper()
-            
-            # שליפת מחיר בזמן אמת
             curr_price = 0.0
             if tick:
                 curr_price = get_real_time_price(tick) or 0.0
                 st.caption(f"Current Price: ${curr_price:.2f}")
 
-            # === לוגיקה לגלגלת מחיר (Wheel) ===
             st.markdown("<strong>Target Price</strong>", unsafe_allow_html=True)
-            
-            # ברירת מחדל אם אין ערך
+            # Slider Logic
             if 'slider_price' not in st.session_state: st.session_state.slider_price = curr_price
+            input_val = st.number_input("Price Input", value=float(st.session_state.slider_price), label_visibility="collapsed")
             
-            # אינפוט לכתיבה ידנית
-            input_val = st.number_input("Input", value=float(st.session_state.slider_price), label_visibility="collapsed", key="num_input")
+            s_min = float(curr_price) * 0.5
+            s_max = float(curr_price) * 1.5
+            if s_max == 0: s_max = 100
             
-            # סליידר לכיוונון עדין (טווח דינמי סביב המחיר הנוכחי)
-            slider_min = float(curr_price) * 0.5
-            slider_max = float(curr_price) * 1.5
-            if slider_max == 0: slider_max = 100 # Fallback
-            
-            slider_val = st.slider("Fine Tune", min_value=slider_min, max_value=slider_max, value=input_val, key="slider_input")
-            
-            # סינכרון: הסליידר הוא הקובע הסופי לתצוגה
-            final_target_price = slider_val
+            final_target = st.slider("Fine Tune", min_value=s_min, max_value=s_max, value=input_val)
             
             st.markdown("---")
-            min_vol = st.number_input("Min Volume (Millions)", value=5, step=1)
-            
-            # חיווי ווטסאפ
+            min_vol = st.number_input("Min Volume (M)", value=5, step=1)
             st.caption("✅ Alert sends to WhatsApp")
             
             if st.button("SET ALERT"):
                 if tick:
-                    # כאן נחליט אם זה Stop Loss או Take Profit לפי המחיר הנוכחי
-                    min_p_limit = final_target_price if final_target_price < curr_price else ""
-                    max_p_limit = final_target_price if final_target_price > curr_price else ""
-                    
-                    save_alert(tick, min_p_limit, max_p_limit, min_vol*1000000, True)
+                    min_p = final_target if final_target < curr_price else ""
+                    max_p = final_target if final_target > curr_price else ""
+                    save_alert(tick, min_p, max_p, min_vol*1000000, True)
 
-    # === צד ימין: רשימת מעקב ===
+    # Right: Watchlist
     with col_list:
         h1, h2 = st.columns([4, 1])
         with h1: st.markdown("### 📋 Active Watchlist")
@@ -397,57 +361,58 @@ def dashboard_page():
         if sh:
             try:
                 df = pd.DataFrame(sh.get_all_records())
-                # טיפול בשמות עמודות (תאימות לאחור)
                 user_col = 'user_email' if 'user_email' in df.columns else 'email'
-                
                 if not df.empty and user_col in df.columns:
-                    # סינון
                     my_df = df[(df[user_col] == st.session_state.user_email) & (df['status'] == 'Active')]
-                    
-                    if my_df.empty:
-                        st.info("No active alerts yet.")
+                    if my_df.empty: st.info("No active alerts.")
                     else:
-                        # תצוגת כרטיסים (Grid)
-                        grid_cols = st.columns(2)
+                        grid = st.columns(2)
                         for i, (idx, row) in enumerate(my_df.iterrows()):
-                            col = grid_cols[i % 2]
-                            sym = row['symbol']
-                            target = row['max_price'] if row['max_price'] else row['min_price']
-                            
-                            with col:
+                            with grid[i % 2]:
+                                target = row['max_price'] if row['max_price'] else row['min_price']
                                 st.markdown(f"""
                                 <div class="stock-card">
-                                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                                        <div style="font-size:1.5rem; font-weight:bold; color:#FF7F50;">{sym}</div>
-                                        <div style="font-size:0.8rem; color:#888;">Vol: {str(row['min_volume'])[:2]}M</div>
+                                    <div style="display:flex; justify-content:space-between;">
+                                        <h3 style="margin:0; color:#FF7F50;">{row['symbol']}</h3>
+                                        <span style="color:#888;">{str(row['min_volume'])[:2]}M Vol</span>
                                     </div>
-                                    <div style="margin-top:10px; font-size:1.1rem;">
-                                        Target: <b>${target}</b>
-                                    </div>
+                                    <div style="font-size:1.2rem; margin-top:10px;">Target: <b>${target}</b></div>
                                 </div>
                                 """, unsafe_allow_html=True)
-                                with st.expander("View Chart"):
-                                    show_chart(sym)
-                else:
-                    st.info("DB Empty or Column Mismatch")
-            except Exception as e:
-                st.error(f"Error: {e}")
+                                with st.expander("Chart"): show_chart(row['symbol'])
+                else: st.info("No Data")
+            except: st.error("DB Error")
 
 # ==========================================
-# 7. הרצת האפליקציה (Main Router)
+# 8. PAGE: ARCHIVE
+# ==========================================
+def archive_page():
+    st.title("🗄️ Archive")
+    if st.button("← Back"): navigate_to('dashboard')
+    st.markdown("---")
+    sh = get_worksheet("Rules")
+    if sh:
+        try:
+            df = pd.DataFrame(sh.get_all_records())
+            if not df.empty and 'user_email' in df.columns:
+                adf = df[(df['user_email'] == st.session_state.user_email) & (df['status'] != 'Active')]
+                for i, row in adf.iterrows():
+                    st.markdown(f"""
+                    <div class="archive-card">
+                        <b>{row['symbol']}</b> - {row['created_at']} <span style="float:right;">{row['status']}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else: st.info("Empty Archive")
+        except: pass
+
+# ==========================================
+# 9. MAIN ROUTER
 # ==========================================
 apply_custom_css()
 
-# ניתוב לפי מצב
 if st.session_state.logged_in:
-    if st.session_state['page'] == 'archive':
-        archive_page()
-    else:
-        st.session_state['page'] = 'dashboard'
-        dashboard_page()
+    if st.session_state['page'] == 'archive': archive_page()
+    else: dashboard_page()
 else:
-    # אם לא מחובר, נווט בין לוגין להרשמה
-    if st.session_state['page'] == 'signup':
-        signup_page()
-    else:
-        login_page()
+    if st.session_state['page'] == 'signup': signup_page()
+    else: login_page()
