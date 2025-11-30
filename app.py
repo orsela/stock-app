@@ -9,7 +9,7 @@ import hashlib
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. עיצוב ו-CSS (מותאם לכפתורי אייקונים)
+# 1. עיצוב ו-CSS (כולל עיצוב כפתורי סושיאל מותאמים אישית)
 # ==========================================
 st.set_page_config(page_title="StockPulse", layout="wide", page_icon="📈")
 
@@ -25,70 +25,85 @@ def apply_custom_css():
             color: #FFFFFF;
         }
         
-        /* --- עיצוב הטאבים (Tabs) --- */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 20px;
-            margin-bottom: 20px;
-        }
+        /* --- טאבים --- */
+        .stTabs [data-baseweb="tab-list"] { gap: 20px; margin-bottom: 20px; }
         .stTabs [data-baseweb="tab"] {
-            height: 50px;
-            white-space: pre-wrap;
-            background-color: transparent;
-            border-radius: 0px;
-            color: #888;
-            font-size: 1.2rem;
-            font-weight: 700;
-            border: none;
+            height: 50px; white-space: pre-wrap; background-color: transparent;
+            border-radius: 0px; color: #888; font-size: 1.2rem; font-weight: 700; border: none;
         }
         .stTabs [aria-selected="true"] {
-            color: #FF7F50 !important;
-            border-bottom: 3px solid #FF7F50;
+            color: #FF7F50 !important; border-bottom: 3px solid #FF7F50;
         }
         
         /* --- שדות קלט --- */
         div[data-testid="stTextInput"] > div > div {
-            background-color: #F0F2F6 !important;
-            border-radius: 8px;
-            border: none;
-            color: #333 !important;
+            background-color: #F0F2F6 !important; border-radius: 8px; border: none; color: #333 !important;
         }
-        input[type="text"], input[type="password"] {
-            color: #333 !important;
-        }
+        input[type="text"], input[type="password"] { color: #333 !important; }
         
-        /* --- כפתור ראשי (כתום רחב) --- */
-        /* זה משפיע על כפתורי הלוגין וההרשמה */
+        /* --- כפתורים כלליים (כתום) --- */
         div.stButton > button {
-            background-color: #FF7F50; 
-            color: white;
-            border-radius: 8px;
-            border: none;
-            padding: 12px 0;
-            font-weight: bold;
-            font-size: 16px;
-            width: 100%;
-            transition: 0.3s;
+            background-color: #FF7F50; color: white; border-radius: 8px; border: none;
+            padding: 12px 0; font-weight: bold; font-size: 16px; width: 100%; transition: 0.3s;
         }
         div.stButton > button:hover {
-            background-color: #FF6347;
-            box-shadow: 0px 0px 15px rgba(255, 127, 80, 0.5);
+            background-color: #FF6347; box-shadow: 0px 0px 15px rgba(255, 127, 80, 0.5);
         }
 
-        /* --- כפתורי אייקונים (Social Icons) --- */
-        /* אנו נשתמש ב-Key ספציפי כדי לזהות אותם או במיקום שלהם בטורים צרים */
+        /* ============================================================
+           CSS ספציפי לכפתורי סושיאל (Google, Apple, LinkedIn)
+           אנחנו מזהים אותם לפי המיקום שלהם בתוך העמודות
+           ============================================================ */
         
-        /* טקסטים וכותרות */
+        /* כפתור Google (עמודה 2) */
+        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
+            background-color: #FFFFFF !important; /* רקע לבן */
+            border: 1px solid #ddd !important;
+            /* טקסט גרדיאנט צבעוני */
+            background: -webkit-linear-gradient(45deg, #4285F4, #DB4437, #F4B400, #0F9D58);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 28px !important; /* הגדלת האייקון */
+            font-weight: 900 !important;
+            padding: 5px 0 !important;
+        }
+        
+        /* כפתור Apple (עמודה 3) */
+        div[data-testid="column"]:nth-of-type(3) div.stButton > button {
+            background-color: #FFFFFF !important; /* רקע לבן */
+            color: #000000 !important; /* אייקון שחור */
+            border: 1px solid #ddd !important;
+            font-size: 28px !important;
+            padding: 5px 0 !important;
+        }
+
+        /* כפתור LinkedIn (עמודה 4) */
+        div[data-testid="column"]:nth-of-type(4) div.stButton > button {
+            background-color: #0077b5 !important; /* רקע תכלת לינקדאין */
+            color: #FFFFFF !important; /* אייקון לבן */
+            border: none !important;
+            font-size: 28px !important;
+            padding: 5px 0 !important;
+        }
+        
+        /* אפקט הובר לכל הסושיאל */
+        div[data-testid="column"]:nth-of-type(2) div.stButton > button:hover,
+        div[data-testid="column"]:nth-of-type(3) div.stButton > button:hover,
+        div[data-testid="column"]:nth-of-type(4) div.stButton > button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        /* --- טקסטים --- */
         .main-title { font-size: 3.5rem; font-weight: 900; color: #fff; line-height: 1.1; }
         .sub-title { font-size: 1.2rem; color: #888; margin-bottom: 30px; }
         .divider-text { text-align: center; color: #888; font-size: 0.9rem; margin: 30px 0 20px 0; }
         
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
-        header {visibility: hidden;}
+        #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
 
-# State Management
+# ניהול סטייט
 if 'page' not in st.session_state: st.session_state['page'] = 'auth'
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'user_email' not in st.session_state: st.session_state['user_email'] = None
@@ -150,7 +165,7 @@ def login_user(email, password):
     return False
 
 # ==========================================
-# 3. נתוני שוק (ללא שינוי)
+# 3. נתוני שוק
 # ==========================================
 @st.cache_data(ttl=60)
 def get_market_metrics():
@@ -177,6 +192,7 @@ def get_real_time_price(symbol):
 def save_alert(ticker, min_p, max_p, vol, one_time):
     sheet = get_worksheet("Rules")
     if not sheet: return
+    # תיקון הקריסה: שימוש ב-0 במקום מחרוזת ריקה
     row = [st.session_state.user_email, ticker, min_p if min_p>0 else "", max_p if max_p>0 else "", vol, str(datetime.now()), "TRUE" if one_time else "FALSE", "Active"]
     try:
         sheet.append_row(row)
@@ -198,16 +214,14 @@ def show_chart(ticker):
     except: st.caption("Chart unavailable")
 
 # ==========================================
-# 4. מסך התחברות והרשמה (עם כפתורים ריבועיים)
+# 4. מסך התחברות (מעודכן עם כפתורי סושיאל צבעוניים)
 # ==========================================
 def auth_page():
     col_img, col_form = st.columns([1.5, 1])
     
     with col_img:
-        try:
-            st.image("login_image.png", use_container_width=True)
-        except:
-            st.warning("Image 'login_image.png' not found.")
+        try: st.image("login_image.png", use_container_width=True)
+        except: st.warning("Image 'login_image.png' not found.")
 
     with col_form:
         st.markdown("<br>", unsafe_allow_html=True)
@@ -216,7 +230,6 @@ def auth_page():
         
         tab_login, tab_signup = st.tabs(["LOG IN", "SIGN UP"])
         
-        # --- TAB 1: LOG IN ---
         with tab_login:
             st.markdown("<br>", unsafe_allow_html=True)
             l_email = st.text_input("Email Address", key="l_email")
@@ -233,21 +246,22 @@ def auth_page():
                 else:
                     st.error("Invalid Credentials")
             
-            # --- אזור האייקונים בלבד ---
+            # --- כפתורי אייקונים מעוצבים ---
             st.markdown('<div class="divider-text">— OR CONTINUE WITH —</div>', unsafe_allow_html=True)
             
-            # יצירת 5 עמודות כדי למרכז את ה-3 האמצעיות וליצור כפתורים קטנים
-            # העמודות הצרות (col_a, col_b, col_c) יגרמו לכפתורים להיות ריבועיים וקטנים
+            # ה-CSS למעלה משתמש במיקום העמודות האלו (2,3,4) כדי לצבוע אותן
             gap1, col_g, col_a, col_l, gap2 = st.columns([2, 1, 1, 1, 2])
             
             with col_g:
-                st.button("G", key="icon_g", help="Google")
+                # G צבעוני על רקע לבן (מוגדר ב-CSS)
+                st.button("G", key="icon_g") 
             with col_a:
-                st.button("", key="icon_a", help="Apple")
+                # תפוח שחור על רקע לבן (מוגדר ב-CSS)
+                st.button("", key="icon_a") 
             with col_l:
-                st.button("in", key="icon_l", help="LinkedIn")
+                # in לבן על רקע תכלת (מוגדר ב-CSS)
+                st.button("in", key="icon_l")
 
-        # --- TAB 2: SIGN UP ---
         with tab_signup:
             st.markdown("<br>", unsafe_allow_html=True)
             s_email = st.text_input("New Email", key="s_email")
@@ -260,9 +274,9 @@ def auth_page():
                     st.success("Account created successfully!")
                     time.sleep(1)
                     st.balloons()
-            
+
 # ==========================================
-# 5. PAGE: DASHBOARD (ללא שינוי)
+# 5. דאשבורד (תקין)
 # ==========================================
 def dashboard_page():
     c1, c2 = st.columns([6, 1])
@@ -310,8 +324,9 @@ def dashboard_page():
             st.caption("✅ Alert sends to WhatsApp")
             if st.button("SET ALERT"):
                 if tick:
-                    min_p = final_target if final_target < curr_price else ""
-                    max_p = final_target if final_target > curr_price else ""
+                    # שימוש ב-0 כערך ברירת מחדל
+                    min_p = final_target if final_target < curr_price else 0
+                    max_p = final_target if final_target > curr_price else 0
                     save_alert(tick, min_p, max_p, min_vol*1000000, True)
 
     with col_list:
@@ -347,7 +362,7 @@ def dashboard_page():
             except: st.error("DB Error")
 
 # ==========================================
-# 6. PAGE: ARCHIVE (ללא שינוי)
+# 6. ארכיון
 # ==========================================
 def archive_page():
     st.title("🗄️ Archive")
@@ -369,7 +384,7 @@ def archive_page():
         except: pass
 
 # ==========================================
-# 7. MAIN ROUTER
+# 7. ראוטר ראשי
 # ==========================================
 apply_custom_css()
 
