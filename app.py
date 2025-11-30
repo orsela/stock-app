@@ -18,46 +18,95 @@ st.set_page_config(page_title="StockWatcher Pro", layout="wide", page_icon="🦁
 def apply_custom_css():
     st.markdown("""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@400;700;900&display=swap');
         
         html, body, [class*="css"] {
             font-family: 'Heebo', sans-serif;
         }
         
-        /* עיצוב כרטיס מניה */
+        /* --- כותרות ראשיות (H1) --- */
+        h1 {
+            font-size: 3.5rem !important;  /* ענק */
+            font-weight: 900 !important;   /* מודגש מאוד */
+            color: #FFFFFF !important;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 20px !important;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5); /* צל עדין לקריאות */
+        }
+        
+        /* --- כותרות משניות (H2) - כמו 'Create Alert' --- */
+        h2 {
+            font-size: 2.2rem !important;
+            font-weight: 700 !important;
+            color: #FAFAFA !important;
+            border-bottom: 2px solid #FF4B4B; /* פס אדום מתחת לכותרת */
+            padding-bottom: 10px;
+            margin-top: 30px !important;
+            margin-bottom: 20px !important;
+        }
+        
+        /* --- כותרות רמה 3 (H3) --- */
+        h3 {
+            font-size: 1.5rem !important;
+            font-weight: 600 !important;
+            color: #E0E0E0 !important;
+        }
+        
+        /* --- עיצוב כרטיס מניה --- */
         div.stock-card {
             background-color: #262730;
             border: 1px solid #444;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            padding: 20px; /* יותר מרווח פנימי */
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
             transition: 0.3s;
         }
         div.stock-card:hover {
             border-color: #FF4B4B;
-            transform: translateY(-3px);
+            transform: translateY(-5px);
+            box-shadow: 0 8px 16px rgba(255, 75, 75, 0.2);
         }
+        
+        /* --- כותרת המניה בתוך הכרטיס --- */
         .card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             border-bottom: 1px solid #555;
-            padding-bottom: 8px;
-            margin-bottom: 8px;
+            padding-bottom: 12px;
+            margin-bottom: 12px;
         }
-        .card-metric {
+        
+        /* הגדלה משמעותית של שם המניה (NVDA וכו') */
+        .symbol-text {
+            color: #FF4B4B; 
+            font-weight: 900; 
+            font-size: 1.8rem; /* גדול וברור */
+            letter-spacing: 1px;
+        }
+        
+        .status-badge {
+            background: #444; 
+            padding: 4px 10px; 
+            border-radius: 6px; 
             font-size: 0.9em;
-            color: #ccc;
+            font-weight: bold;
+            color: #fff;
+        }
+
+        .card-metric {
+            font-size: 1rem; /* הגדלתי גם את הטקסט הקטן */
+            color: #bbb;
         }
         .card-value {
-            font-size: 1.1em;
+            font-size: 1.4em; /* המספרים גדולים יותר */
             font-weight: bold;
             color: #fff;
         }
         </style>
     """, unsafe_allow_html=True)
-
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'user_email' not in st.session_state: st.session_state['user_email'] = None
 
@@ -180,12 +229,11 @@ def show_chart(ticker):
         st.caption("לא ניתן לטעון גרף")
 
 def show_alert_cards(df):
-    """מחליף את הטבלה הישנה בכרטיסים מעוצבים"""
+    """מחליף את הטבלה הישנה בכרטיסים מעוצבים - גרסה עם פונטים גדולים"""
     if df.empty:
         st.info("אין התראות פעילות להצגה.")
         return
 
-    # חלוקה ל-2 עמודות תצוגה
     cols = st.columns(2)
     for i, (index, row) in enumerate(df.iterrows()):
         col = cols[i % 2]
@@ -194,12 +242,12 @@ def show_alert_cards(df):
         max_p = row['max_price']
         
         with col:
-            # HTML Card
+            # שימוש ב-Classים החדשים מה-CSS
             st.markdown(f"""
             <div class="stock-card">
                 <div class="card-header">
-                    <span style="color:#FF4B4B; font-weight:bold; font-size:1.2em;">{symbol}</span>
-                    <span style="background:#444; padding:2px 6px; border-radius:4px; font-size:0.8em;">Active</span>
+                    <span class="symbol-text">{symbol}</span>
+                    <span class="status-badge">Active</span>
                 </div>
                 <div style="display:flex; justify-content:space-between;">
                     <div><div class="card-metric">Stop Loss</div><div class="card-value">${min_p if min_p else '---'}</div></div>
@@ -208,7 +256,6 @@ def show_alert_cards(df):
             </div>
             """, unsafe_allow_html=True)
             
-            # אזור הגרף (מתחת לכרטיס)
             with st.expander(f"📊 גרף {symbol}"):
                 show_chart(symbol)
 
@@ -324,3 +371,4 @@ if __name__ == "__main__":
         main_app()
     else:
         login_screen_tabs()
+
