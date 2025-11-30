@@ -9,7 +9,7 @@ import hashlib
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. הגדרות מערכת ועיצוב (StockPulse Black Theme)
+# 1. הגדרות מערכת ועיצוב (StockPulse Black Theme - Exact Match to Image)
 # ==========================================
 st.set_page_config(page_title="StockPulse", layout="wide", page_icon="📈")
 
@@ -20,22 +20,55 @@ def apply_custom_css():
         
         /* --- Global Black Theme --- */
         .stApp {
-            background-color: #050505; /* Black background */
+            background-color: #000000; /* Absolute black background */
             font-family: 'Roboto', sans-serif;
             color: #FFFFFF;
         }
         
-        /* --- Inputs --- */
-        div[data-baseweb="input"] {
-            background-color: #1A1A1A;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: white;
+        /* --- Typography --- */
+        .main-title {
+            font-size: 4rem; /* Larger size */
+            font-weight: 900;
+            color: #FFFFFF; /* Solid white */
+            margin-bottom: 0px;
         }
-        input { color: white !important; }
+        .sub-title {
+            font-size: 1.2rem;
+            color: #888; /* Gray text */
+            margin-top: -10px;
+            margin-bottom: 40px;
+        }
+        .input-label {
+            font-size: 1rem;
+            color: #888; /* Gray label */
+            margin-bottom: 5px;
+        }
         
+        /* --- Inputs (Light background, dark text) --- */
+        /* Target the input container */
+        div[data-testid="stTextInput"] > div > div {
+            background-color: #F0F2F6 !important; /* Light gray/white background */
+            border-radius: 8px;
+            border: none;
+            color: #333 !important; /* Dark text inside */
+        }
+        /* Target the input element itself */
+        input[type="text"], input[type="password"] {
+            color: #333 !important; /* Dark text */
+            background-color: transparent !important;
+        }
+        /* Target placeholder text */
+        ::placeholder {
+            color: #888 !important; /* Gray placeholder */
+            opacity: 1;
+        }
+        /* Fix for password visibility icon container */
+        div[data-testid="stTextInput"] > div > div > div:last-child {
+             color: #333 !important; /* Dark icon color */
+        }
+
         /* --- Buttons (Orange) --- */
-        div.stButton > button:first-child {
+        div.stButton > button {
             background-color: #FF7F50; 
             color: white;
             border-radius: 8px;
@@ -44,50 +77,46 @@ def apply_custom_css():
             font-weight: bold;
             font-size: 16px;
             transition: 0.3s;
-            width: 100%;
+            min-width: 120px;
         }
-        div.stButton > button:first-child:hover {
+        div.stButton > button:hover {
             background-color: #FF6347;
             box-shadow: 0px 0px 15px rgba(255, 127, 80, 0.5);
         }
         
-        /* --- Social Login Buttons (Dark) --- */
-        .social-btn {
-             background-color: #1A1A1A !important;
-             border: 1px solid #333 !important;
+        /* --- Social Login Buttons (Orange Square-ish) --- */
+        .social-btn-container button {
+             background-color: #FF7F50 !important;
+             border: none !important;
+             color: white !important;
+             font-size: 1.5rem !important;
+             width: 60px !important;
+             height: 60px !important;
+             border-radius: 12px !important;
+             display: flex;
+             justify-content: center;
+             align-items: center;
         }
 
-        /* --- Cards (Dashboard) --- */
-        .stock-card {
-            background-color: #161616;
-            padding: 20px;
-            border-radius: 12px;
-            border-left: 4px solid #FF7F50;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        /* --- Links & Dividers --- */
+        .forgot-password {
+            text-align: right;
+            font-size: 0.9rem;
+            color: #888;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .divider-text {
+            text-align: center;
+            color: #888;
+            font-size: 0.9rem;
+            margin: 30px 0;
         }
 
-        /* --- Archive Cards --- */
-        .archive-card {
-            background-color: #111;
-            padding: 15px;
-            border-radius: 12px;
-            border-left: 4px solid #444;
-            margin-bottom: 10px;
-            color: #777;
-        }
-
-        /* --- Text Utilities --- */
-        .main-title {
-            font-size: 3rem;
-            font-weight: 900;
-            background: -webkit-linear-gradient(#eee, #555);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
+        /* --- Hide Default Elements --- */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
+        header {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
 
@@ -208,35 +237,28 @@ def show_chart(ticker):
     except: st.caption("Chart unavailable")
 
 # ==========================================
-# 5. PAGE: LOGIN (Updated Black Design)
+# 5. PAGE: LOGIN (MATCHING IMAGE)
 # ==========================================
 def login_page():
-    # Split Screen: Image (Left) | Form (Right)
-    col_img, col_form = st.columns([1.5, 1])
+    # Center the content
+    c1, c2, c3 = st.columns([1, 2, 1])
     
-    with col_img:
-        # Load the uploaded image
-        try:
-            st.image("login_image.png", use_container_width=True)
-        except:
-            # Fallback if image is missing
-            st.warning("Please add 'login_image.png' to the folder.")
-            st.markdown("<h1>📊</h1>", unsafe_allow_html=True)
-
-    with col_form:
-        st.markdown("<br><br>", unsafe_allow_html=True)
+    with c2:
+        st.markdown("<br><br><br>", unsafe_allow_html=True)
         st.markdown('<div class="main-title">STOCKPULSE</div>', unsafe_allow_html=True)
-        st.markdown("<p style='color:#888; margin-top:-10px;'>Real-Time Market Alerts</p>", unsafe_allow_html=True)
+        st.markdown('<div class="sub-title">Real-Time Market Alerts</div>', unsafe_allow_html=True)
         
+        st.markdown('<div class="input-label">Email Address</div>', unsafe_allow_html=True)
+        email = st.text_input("Email Address", placeholder="name@example.com", label_visibility="collapsed")
+        
+        st.markdown('<div class="input-label" style="margin-top: 20px;">Password</div>', unsafe_allow_html=True)
+        password = st.text_input("Password", type="password", placeholder="••••••••", label_visibility="collapsed")
+        
+        st.markdown('<div class="forgot-password">Forgot Password?</div>', unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
         
-        email = st.text_input("Email Address", placeholder="name@example.com")
-        password = st.text_input("Password", type="password", placeholder="••••••••")
-        
-        st.markdown("<div style='text-align: right; font-size: 0.8em; color: #888;'>Forgot Password?</div>", unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        if st.button("LOG IN"):
+        # Login Button
+        if st.button("LOG IN", use_container_width=True):
             if login_user(email, password):
                 st.session_state.user_email = email
                 st.session_state.logged_in = True
@@ -244,22 +266,27 @@ def login_page():
             else:
                 st.error("Invalid Credentials")
 
-        # Social Login Mockup
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<div style='text-align:center; color:#444; font-size:0.8em;'>— OR CONTINUE WITH —</div>", unsafe_allow_html=True)
-        st.markdown("<br>", unsafe_allow_html=True)
+        # Social Login Section
+        st.markdown('<div class="divider-text">— OR CONTINUE WITH —</div>', unsafe_allow_html=True)
         
-        b1, b2, b3 = st.columns(3)
-        with b1: st.button("G", key="g_login")
-        with b2: st.button("", key="a_login")
-        with b3: st.button("in", key="l_login")
-            
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        if st.button("Don't have an account? Sign Up", key="btn_signup"):
-            navigate_to('signup')
+        # Social Buttons (Orange, Square-ish, Centered)
+        sc1, sc2, sc3, sc4, sc5 = st.columns([1, 1, 1, 1, 1])
+        with sc2:
+            st.markdown('<div class="social-btn-container">', unsafe_allow_html=True)
+            st.button("G", key="g_login")
+            st.markdown('</div>', unsafe_allow_html=True)
+        with sc3:
+            st.markdown('<div class="social-btn-container">', unsafe_allow_html=True)
+            # Placeholder for Apple icon
+            st.button("", key="a_login") 
+            st.markdown('</div>', unsafe_allow_html=True)
+        with sc4:
+            st.markdown('<div class="social-btn-container">', unsafe_allow_html=True)
+            st.button("in", key="l_login")
+            st.markdown('</div>', unsafe_allow_html=True)
 
 # ==========================================
-# 6. PAGE: SIGN UP
+# 6. PAGE: SIGN UP (UNCHANGED)
 # ==========================================
 def signup_page():
     col1, col2 = st.columns([1, 1])
@@ -288,7 +315,7 @@ def signup_page():
                 navigate_to('login')
 
 # ==========================================
-# 7. PAGE: DASHBOARD
+# 7. PAGE: DASHBOARD (UNCHANGED)
 # ==========================================
 def dashboard_page():
     # Header
@@ -384,7 +411,7 @@ def dashboard_page():
             except: st.error("DB Error")
 
 # ==========================================
-# 8. PAGE: ARCHIVE
+# 8. PAGE: ARCHIVE (UNCHANGED)
 # ==========================================
 def archive_page():
     st.title("🗄️ Archive")
