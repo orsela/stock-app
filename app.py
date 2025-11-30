@@ -24,64 +24,55 @@ def apply_custom_css():
             font-family: 'Heebo', sans-serif;
         }
         
-        /* --- 1. כותרות ראשיות --- */
-        h1 {
-            font-size: 3rem !important;
-            font-weight: 900 !important;
-            color: #FFF;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
-        }
-        h2 {
-            font-size: 2rem !important;
-            font-weight: 700 !important;
-            border-bottom: 2px solid #FF4B4B;
-            padding-bottom: 5px;
-            margin-top: 20px;
-        }
-        h3 {
-            font-size: 1.5rem !important;
-            font-weight: 600;
-        }
-
-        /* --- 2. עיצוב המדדים (Metrics Dashboard) - התיקון החדש! --- */
+        /* --- כותרות --- */
+        h1 { font-size: 3rem !important; font-weight: 900; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
+        h2 { border-bottom: 2px solid #FF4B4B; padding-bottom: 5px; margin-top: 20px; }
         
-        /* הקופסה עצמה */
+        /* --- עיצוב המדדים (Metrics) - התיקון לכותרות --- */
+        
         div[data-testid="stMetric"] {
-            background-color: #1E1E1E; /* רקע כהה מאוד */
+            background-color: #1E1E1E;
             border: 1px solid #333;
-            padding: 15px 20px;
+            padding: 15px;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            text-align: center; /* מרכוז הטקסט */
+            text-align: center;
             transition: 0.3s;
         }
-        
         div[data-testid="stMetric"]:hover {
-            border-color: #FF4B4B; /* מסגרת אדומה במעבר עכבר */
-            transform: scale(1.02); /* הגדלה עדינה */
+            border-color: #FF4B4B;
+            transform: translateY(-2px);
         }
 
-        /* הכותרת של המדד (למשל S&P 500) */
+        /* >>> כאן השינוי הגדול: עיצוב שם המדד <<< */
+        div[data-testid="stMetricLabel"] {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
         div[data-testid="stMetricLabel"] p {
-            font-size: 1.1rem !important;
-            color: #AAAAAA !important;
-            font-weight: bold;
+            font-size: 1.3rem !important;  /* הגדלנו משמעותית */
+            font-weight: 700 !important;   /* מודגש */
+            color: #FF4B4B !important;     /* צבע אדום-כתום (המותג שלנו) */
+            text-transform: uppercase;     /* אותיות גדולות */
+            letter-spacing: 1px;           /* ריווח בין אותיות */
+            margin-bottom: 5px !important;
         }
 
-        /* המספר הגדול (המחיר) */
+        /* הערך (המספר) */
         div[data-testid="stMetricValue"] div {
-            font-size: 2.2rem !important; /* ענק! */
+            font-size: 2rem !important;
             font-weight: 900 !important;
-            color: #FFFFFF !important;
+            color: #FFF !important;
         }
 
-        /* האחוזים (השינוי) */
+        /* האחוזים */
         div[data-testid="stMetricDelta"] div {
             font-size: 1rem !important;
             font-weight: bold;
         }
 
-        /* --- 3. עיצוב כרטיסי המניות (Watchlist) --- */
+        /* --- כרטיסי מניות --- */
         div.stock-card {
             background-color: #262730;
             border: 1px solid #444;
@@ -90,18 +81,10 @@ def apply_custom_css():
             margin-bottom: 15px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
-        .symbol-text {
-            color: #FF4B4B; 
-            font-weight: 900; 
-            font-size: 1.8rem;
-        }
-        .status-badge {
-            background: #444; padding: 4px 10px; border-radius: 6px; 
-            font-size: 0.9em; font-weight: bold; color: #fff;
-        }
+        .symbol-text { color: #FF4B4B; font-weight: 900; font-size: 1.8rem; }
+        .status-badge { background: #444; padding: 4px 10px; border-radius: 6px; font-weight: bold; color: #fff; }
         .card-metric { font-size: 1rem; color: #bbb; }
         .card-value { font-size: 1.4em; font-weight: bold; color: #fff; }
-        
         </style>
     """, unsafe_allow_html=True)
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
@@ -201,20 +184,19 @@ def get_real_time_price(symbol):
 # 5. רכיבי UI חדשים (New Components)
 # ==========================================
 def show_metrics_bar():
-    st.markdown("### 🌍 Live Market Data") # כותרת אזור המדדים
-    
+    st.markdown("### 🌍 Live Market Data")
     metrics = get_market_metrics()
     c1, c2, c3, c4 = st.columns(4)
     
+    # השמות כאן (פרמטר שני) הם אלו שיוצגו בגדול ובאדום
     def d(col, lbl, k):
         v, c = metrics.get(k, (0,0))
-        # השינוי העיצובי קורה אוטומטית בגלל ה-CSS שהזרקנו למעלה
         col.metric(lbl, f"{v:,.2f}", f"{c:+.2f}%")
 
-    d(c1, "🇺🇸 S&P 500", "S&P 500")
-    d(c2, "💾 NASDAQ", "NASDAQ")
-    d(c3, "₿ Bitcoin", "Bitcoin")
-    d(c4, "😨 VIX", "VIX")
+    d(c1, "S&P 500", "S&P 500")       # שם נקי וברור
+    d(c2, "NASDAQ 100", "NASDAQ")     # שם מלא
+    d(c3, "BITCOIN", "Bitcoin")       # אותיות גדולות
+    d(c4, "VIX Index", "VIX")         # שם מקצועי
     
     st.markdown("---")
 
@@ -374,5 +356,6 @@ if __name__ == "__main__":
         main_app()
     else:
         login_screen_tabs()
+
 
 
