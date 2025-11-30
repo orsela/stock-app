@@ -3,3 +3,5 @@ yfinance
 twilio
 gspread
 oauth2client
+plotly
+
