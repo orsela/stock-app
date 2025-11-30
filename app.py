@@ -9,7 +9,7 @@ import hashlib
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. עיצוב ו-CSS (כולל עיצוב כפתורי סושיאל מותאמים אישית)
+# 1. עיצוב ו-CSS (כותרות ברורות, כפתורים תכולים)
 # ==========================================
 st.set_page_config(page_title="StockPulse", layout="wide", page_icon="📈")
 
@@ -25,6 +25,85 @@ def apply_custom_css():
             color: #FFFFFF;
         }
         
+        /* --- כותרות ברורות (ללא שקיפות) --- */
+        .main-title {
+            font-size: 3.5rem;
+            font-weight: 900;
+            color: #FFFFFF !important; /* לבן מלא */
+            opacity: 1 !important;
+            line-height: 1.1;
+            text-shadow: 0px 0px 10px rgba(0,0,0,0.5);
+        }
+        .sub-title {
+            font-size: 1.2rem;
+            color: #E0E0E0 !important; /* אפור בהיר מאוד */
+            font-weight: 400;
+            margin-bottom: 30px;
+        }
+        .divider-text {
+            text-align: center;
+            color: #BBBBBB;
+            font-size: 0.9rem;
+            margin: 30px 0 20px 0;
+        }
+
+        /* --- שדות קלט --- */
+        div[data-testid="stTextInput"] > div > div {
+            background-color: #F0F2F6 !important;
+            border-radius: 8px;
+            border: none;
+            color: #333 !important;
+        }
+        input[type="text"], input[type="password"] {
+            color: #333 !important;
+        }
+        
+        /* --- כפתורים ראשיים (כתום) --- */
+        div.stButton > button {
+            background-color: #FF7F50; 
+            color: white;
+            border-radius: 8px;
+            border: none;
+            padding: 12px 0;
+            font-weight: bold;
+            font-size: 16px;
+            width: 100%;
+            transition: 0.3s;
+        }
+        div.stButton > button:hover {
+            background-color: #FF6347;
+            box-shadow: 0px 0px 15px rgba(255, 127, 80, 0.5);
+        }
+
+        /* --- כפתורי סושיאל (ריבועים תכולים) --- */
+        /* אנו נשתמש ב-Key ספציפי או במיקום העמודות כדי לצבוע אותם */
+        
+        /* תכלת עדין לכל שלושת הכפתורים בשורת הסושיאל */
+        div[data-testid="column"]:nth-of-type(2) div.stButton > button,
+        div[data-testid="column"]:nth-of-type(3) div.stButton > button,
+        div[data-testid="column"]:nth-of-type(4) div.stButton > button {
+            background-color: #4FC3F7 !important; /* תכלת עדין */
+            color: #FFFFFF !important; /* אייקון לבן */
+            border: none !important;
+            font-size: 26px !important;
+            font-weight: 900 !important; /* בולד */
+            border-radius: 12px !important;
+            height: 60px !important; /* גובה קבוע ליצירת ריבוע */
+            padding: 0 !important;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-image: none !important; /* ביטול גרדיאנטים קודמים */
+        }
+
+        /* אפקט הובר לריבועים */
+        div[data-testid="column"]:nth-of-type(2) div.stButton > button:hover,
+        div[data-testid="column"]:nth-of-type(3) div.stButton > button:hover,
+        div[data-testid="column"]:nth-of-type(4) div.stButton > button:hover {
+            background-color: #29B6F6 !important; /* תכלת מעט כהה יותר */
+            transform: scale(1.05);
+        }
+
         /* --- טאבים --- */
         .stTabs [data-baseweb="tab-list"] { gap: 20px; margin-bottom: 20px; }
         .stTabs [data-baseweb="tab"] {
@@ -34,71 +113,7 @@ def apply_custom_css():
         .stTabs [aria-selected="true"] {
             color: #FF7F50 !important; border-bottom: 3px solid #FF7F50;
         }
-        
-        /* --- שדות קלט --- */
-        div[data-testid="stTextInput"] > div > div {
-            background-color: #F0F2F6 !important; border-radius: 8px; border: none; color: #333 !important;
-        }
-        input[type="text"], input[type="password"] { color: #333 !important; }
-        
-        /* --- כפתורים כלליים (כתום) --- */
-        div.stButton > button {
-            background-color: #FF7F50; color: white; border-radius: 8px; border: none;
-            padding: 12px 0; font-weight: bold; font-size: 16px; width: 100%; transition: 0.3s;
-        }
-        div.stButton > button:hover {
-            background-color: #FF6347; box-shadow: 0px 0px 15px rgba(255, 127, 80, 0.5);
-        }
 
-        /* ============================================================
-           CSS ספציפי לכפתורי סושיאל (Google, Apple, LinkedIn)
-           אנחנו מזהים אותם לפי המיקום שלהם בתוך העמודות
-           ============================================================ */
-        
-        /* כפתור Google (עמודה 2) */
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button {
-            background-color: #FFFFFF !important; /* רקע לבן */
-            border: 1px solid #ddd !important;
-            /* טקסט גרדיאנט צבעוני */
-            background: -webkit-linear-gradient(45deg, #4285F4, #DB4437, #F4B400, #0F9D58);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-size: 28px !important; /* הגדלת האייקון */
-            font-weight: 900 !important;
-            padding: 5px 0 !important;
-        }
-        
-        /* כפתור Apple (עמודה 3) */
-        div[data-testid="column"]:nth-of-type(3) div.stButton > button {
-            background-color: #FFFFFF !important; /* רקע לבן */
-            color: #000000 !important; /* אייקון שחור */
-            border: 1px solid #ddd !important;
-            font-size: 28px !important;
-            padding: 5px 0 !important;
-        }
-
-        /* כפתור LinkedIn (עמודה 4) */
-        div[data-testid="column"]:nth-of-type(4) div.stButton > button {
-            background-color: #0077b5 !important; /* רקע תכלת לינקדאין */
-            color: #FFFFFF !important; /* אייקון לבן */
-            border: none !important;
-            font-size: 28px !important;
-            padding: 5px 0 !important;
-        }
-        
-        /* אפקט הובר לכל הסושיאל */
-        div[data-testid="column"]:nth-of-type(2) div.stButton > button:hover,
-        div[data-testid="column"]:nth-of-type(3) div.stButton > button:hover,
-        div[data-testid="column"]:nth-of-type(4) div.stButton > button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        /* --- טקסטים --- */
-        .main-title { font-size: 3.5rem; font-weight: 900; color: #fff; line-height: 1.1; }
-        .sub-title { font-size: 1.2rem; color: #888; margin-bottom: 30px; }
-        .divider-text { text-align: center; color: #888; font-size: 0.9rem; margin: 30px 0 20px 0; }
-        
         #MainMenu {visibility: hidden;} footer {visibility: hidden;} header {visibility: hidden;}
         </style>
     """, unsafe_allow_html=True)
@@ -192,7 +207,6 @@ def get_real_time_price(symbol):
 def save_alert(ticker, min_p, max_p, vol, one_time):
     sheet = get_worksheet("Rules")
     if not sheet: return
-    # תיקון הקריסה: שימוש ב-0 במקום מחרוזת ריקה
     row = [st.session_state.user_email, ticker, min_p if min_p>0 else "", max_p if max_p>0 else "", vol, str(datetime.now()), "TRUE" if one_time else "FALSE", "Active"]
     try:
         sheet.append_row(row)
@@ -214,7 +228,7 @@ def show_chart(ticker):
     except: st.caption("Chart unavailable")
 
 # ==========================================
-# 4. מסך התחברות (מעודכן עם כפתורי סושיאל צבעוניים)
+# 4. מסך התחברות (מעודכן: כותרות ברורות וכפתורים תכולים)
 # ==========================================
 def auth_page():
     col_img, col_form = st.columns([1.5, 1])
@@ -225,6 +239,7 @@ def auth_page():
 
     with col_form:
         st.markdown("<br>", unsafe_allow_html=True)
+        # כותרות בלבן מלא (מוגדר ב-CSS)
         st.markdown('<div class="main-title">STOCKPULSE</div>', unsafe_allow_html=True)
         st.markdown('<div class="sub-title">Real-Time Market Alerts</div>', unsafe_allow_html=True)
         
@@ -246,21 +261,15 @@ def auth_page():
                 else:
                     st.error("Invalid Credentials")
             
-            # --- כפתורי אייקונים מעוצבים ---
             st.markdown('<div class="divider-text">— OR CONTINUE WITH —</div>', unsafe_allow_html=True)
             
-            # ה-CSS למעלה משתמש במיקום העמודות האלו (2,3,4) כדי לצבוע אותן
+            # עמודות מכווצות לכפתורים מרובעים
             gap1, col_g, col_a, col_l, gap2 = st.columns([2, 1, 1, 1, 2])
             
-            with col_g:
-                # G צבעוני על רקע לבן (מוגדר ב-CSS)
-                st.button("G", key="icon_g") 
-            with col_a:
-                # תפוח שחור על רקע לבן (מוגדר ב-CSS)
-                st.button("", key="icon_a") 
-            with col_l:
-                # in לבן על רקע תכלת (מוגדר ב-CSS)
-                st.button("in", key="icon_l")
+            # כל הכפתורים יקבלו את עיצוב התכלת + לבן בולד מה-CSS
+            with col_g: st.button("G", key="icon_g", help="Google")
+            with col_a: st.button("", key="icon_a", help="Apple")
+            with col_l: st.button("in", key="icon_l", help="LinkedIn")
 
         with tab_signup:
             st.markdown("<br>", unsafe_allow_html=True)
@@ -324,7 +333,6 @@ def dashboard_page():
             st.caption("✅ Alert sends to WhatsApp")
             if st.button("SET ALERT"):
                 if tick:
-                    # שימוש ב-0 כערך ברירת מחדל
                     min_p = final_target if final_target < curr_price else 0
                     max_p = final_target if final_target > curr_price else 0
                     save_alert(tick, min_p, max_p, min_vol*1000000, True)
