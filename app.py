@@ -243,6 +243,9 @@ def auth_page():
                 if add_user_to_db(ne, np, ph): st.success("Created.")
                 else: st.error("Error")
 
+# ==========================================
+# 5. דאשבורד (מתוקן ומפושט)
+# ==========================================
 def dashboard_page():
     # Ticker Tape
     metrics = get_top_metrics()
@@ -252,7 +255,7 @@ def dashboard_page():
         tape_html += f'<div class="ticker-item">{k}: <span style="color:{color}">{v[0]:,.2f} ({v[1]:+.2f}%)</span></div>'
     st.markdown(f'<div class="ticker-wrap"><div class="ticker-move">{tape_html * 3}</div></div>', unsafe_allow_html=True)
 
-    # Header with LOGO instead of plain title
+    # Header with LOGO
     c1, c2 = st.columns([8, 1])
     with c1:
         st.markdown("""
@@ -368,16 +371,29 @@ def dashboard_page():
                             for i, row in my_df.iterrows():
                                 sym = row['symbol']
                                 
-                                t_max = safe_float(row.get('max_price'))
-                                t_min = safe_float(row.get('min_price'))
-                                target = t_max if t_max > 0 else t_min
+                                # --- תיקון: פישוט הקוד למניעת שגיאות סינטקס ---
+                                t_max_val = row.get('max_price')
+                                t_min_val = row.get('min_price')
+                                t_max = safe_float(t_max_val)
+                                t_min = safe_float(t_min_val)
+                                
+                                target = 0.0
+                                if t_max > 0:
+                                    target = t_max
+                                else:
+                                    target = t_min
                                 
                                 v_raw = safe_float(row.get('min_volume'))
-                                vol_display = str(v_raw)[:2] if v_raw else "0"
+                                vol_display = str(v_raw)[:2]
 
+                                # שורת השגיאה המקורית הייתה כאן - כעת היא מופרדת
                                 stock_info = get_stock_analysis(sym)
-                                cp = stock_info['price'] if stock_info else 0
-                                ma = stock_info['ma150'] if stock_info else 0
+                                
+                                cp = 0.0
+                                ma = 0.0
+                                if stock_info:
+                                    cp = stock_info['price']
+                                    ma = stock_info['ma150']
                                 
                                 with st.expander(f"{sym} | TGT: ${target} | NOW: ${cp:.2f}"):
                                     c1, c2 = st.columns(2)
@@ -394,7 +410,6 @@ def dashboard_page():
                                         render_chart(stock_info['hist'], "")
                                         
             except Exception as e: st.error(f"List Error: {e}")
-
 def archive_page():
     st.title("🗄️ ARCHIVE")
     if st.button("BACK"): 
@@ -423,3 +438,4 @@ if st.session_state.logged_in:
     else: dashboard_page()
 else:
     auth_page()
+
