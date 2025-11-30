@@ -19,7 +19,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# TERMINAL CSS
+# CSS STYLING
 # ==========================================
 def apply_terminal_css():
     st.markdown("""
@@ -34,7 +34,6 @@ def apply_terminal_css():
         .logo-title { font-size: 3rem; font-weight: 900; text-align: center; margin-bottom: 5px; letter-spacing: -1px; }
         .logo-subtitle { font-family: 'JetBrains Mono', monospace; color: #FF7F50; font-size: 1rem; text-align: center; margin-bottom: 30px; letter-spacing: 1px; }
         
-        /* Dashboard Logo */
         .dashboard-logo { font-size: 2.2rem; font-weight: 900; color: #FFFFFF; margin: 0; letter-spacing: -1px; line-height: 1; }
         .dashboard-sub { font-family: 'JetBrains Mono', monospace; color: #FF7F50; font-size: 0.8rem; letter-spacing: 1px; }
 
@@ -67,13 +66,12 @@ def apply_terminal_css():
             font-size: 26px !important; height: 60px !important;
         }
 
-        /* Ticker */
+        /* Ticker & Cards */
         .ticker-wrap { width: 100%; overflow: hidden; background-color: #111; border-bottom: 1px solid #333; padding: 10px 0; margin-bottom: 20px; white-space: nowrap; }
         .ticker-move { display: inline-block; animation: ticker 35s linear infinite; }
         .ticker-item { display: inline-block; padding: 0 2rem; font-family: 'JetBrains Mono', monospace; font-size: 1rem; color: #00FF00; }
         @keyframes ticker { 0% { transform: translate3d(0, 0, 0); } 100% { transform: translate3d(-100%, 0, 0); } }
 
-        /* Stock Cards */
         .stock-header { font-size: 2.5rem; font-weight: 900; color: #FF7F50; margin: 0; }
         .stock-price-lg { font-size: 2rem; font-family: 'JetBrains Mono'; font-weight: 700; }
         .ma-box { background: #222; border: 1px solid #444; padding: 10px; border-radius: 5px; text-align: center; margin-bottom: 10px; }
@@ -81,13 +79,16 @@ def apply_terminal_css():
     """, unsafe_allow_html=True)
 
 # ==========================================
-# SESSION & AUTH
+# STATE MANAGEMENT
 # ==========================================
 if 'page' not in st.session_state: st.session_state['page'] = 'auth'
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'user_email' not in st.session_state: st.session_state['user_email'] = None
 if 'target_price' not in st.session_state: st.session_state['target_price'] = 0.0
 
+# ==========================================
+# BACKEND FUNCTIONS
+# ==========================================
 def get_client():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     try:
@@ -135,9 +136,6 @@ def login_user(email, password):
     except: pass
     return False
 
-# ==========================================
-# DATA & LOGIC
-# ==========================================
 def safe_float(val):
     try: return float(val)
     except: return 0.0
@@ -161,6 +159,7 @@ def get_top_metrics():
 
 @st.cache_data(ttl=60)
 def get_stock_analysis(symbol):
+    # This function handles its own errors and returns None if failed
     try:
         t = yf.Ticker(symbol)
         hist = t.history(period="1y")
@@ -202,7 +201,7 @@ def render_chart(hist, title):
     st.plotly_chart(fig, use_container_width=True)
 
 # ==========================================
-# PAGES
+# UI PAGES
 # ==========================================
 def auth_page():
     col_img, col_form = st.columns([1.5, 1])
@@ -249,7 +248,6 @@ def dashboard_page():
         tape_html += f'<div class="ticker-item">{k}: <span style="color:{color}">{v[0]:,.2f} ({v[1]:+.2f}%)</span></div>'
     st.markdown(f'<div class="ticker-wrap"><div class="ticker-move">{tape_html * 3}</div></div>', unsafe_allow_html=True)
 
-    # Header with LOGO
     c1, c2 = st.columns([8, 1])
     with c1:
         st.markdown("""
@@ -364,21 +362,16 @@ def dashboard_page():
                             for i, row in my_df.iterrows():
                                 sym = row['symbol']
                                 
-                                # --- תיקון סופי לשגיאת הסינטקס ---
-                                t_max_val = row.get('max_price')
-                                t_min_val = row.get('min_price')
-                                t_max = safe_float(t_max_val)
-                                t_min = safe_float(t_min_val)
+                                t_max = safe_float(row.get('max_price'))
+                                t_min = safe_float(row.get('min_price'))
                                 target = t_max if t_max > 0 else t_min
                                 
                                 v_raw = safe_float(row.get('min_volume'))
                                 vol_display = str(v_raw)[:2]
 
-                                # קריאה לפונקציה בשורה נפרדת לחלוטין למניעת שגיאות
-                                try:
-                                    stock_info = get_stock_analysis(sym)
-                                except:
-                                    stock_info = None
+                                # FIX: No try/except block here to prevent SyntaxError
+                                # The function get_stock_analysis handles errors internally
+                                stock_info = get_stock_analysis(sym)
                                 
                                 cp = 0.0
                                 ma = 0.0
