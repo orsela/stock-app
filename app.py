@@ -9,7 +9,7 @@ import hashlib
 import plotly.graph_objects as go
 
 # ==========================================
-# 1. עיצוב ו-CSS (שחור, כפתורים כתומים, טאבים)
+# 1. עיצוב ו-CSS (מותאם לכפתורי אייקונים)
 # ==========================================
 st.set_page_config(page_title="StockPulse", layout="wide", page_icon="📈")
 
@@ -38,14 +38,14 @@ def apply_custom_css():
             color: #888;
             font-size: 1.2rem;
             font-weight: 700;
-            border: none; /* ביטול גבולות ברירת מחדל */
+            border: none;
         }
         .stTabs [aria-selected="true"] {
             color: #FF7F50 !important;
-            border-bottom: 3px solid #FF7F50; /* קו תחתון מודגש יותר */
+            border-bottom: 3px solid #FF7F50;
         }
         
-        /* --- שדות קלט (רקע בהיר, טקסט כהה) --- */
+        /* --- שדות קלט --- */
         div[data-testid="stTextInput"] > div > div {
             background-color: #F0F2F6 !important;
             border-radius: 8px;
@@ -56,7 +56,8 @@ def apply_custom_css():
             color: #333 !important;
         }
         
-        /* --- כפתורים (כתום) --- */
+        /* --- כפתור ראשי (כתום רחב) --- */
+        /* זה משפיע על כפתורי הלוגין וההרשמה */
         div.stButton > button {
             background-color: #FF7F50; 
             color: white;
@@ -67,19 +68,20 @@ def apply_custom_css():
             font-size: 16px;
             width: 100%;
             transition: 0.3s;
-            margin-bottom: 10px; /* ריווח בין כפתורים אנכיים */
         }
         div.stButton > button:hover {
             background-color: #FF6347;
             box-shadow: 0px 0px 15px rgba(255, 127, 80, 0.5);
         }
+
+        /* --- כפתורי אייקונים (Social Icons) --- */
+        /* אנו נשתמש ב-Key ספציפי כדי לזהות אותם או במיקום שלהם בטורים צרים */
         
-        /* --- טקסטים וכותרות --- */
+        /* טקסטים וכותרות */
         .main-title { font-size: 3.5rem; font-weight: 900; color: #fff; line-height: 1.1; }
         .sub-title { font-size: 1.2rem; color: #888; margin-bottom: 30px; }
         .divider-text { text-align: center; color: #888; font-size: 0.9rem; margin: 30px 0 20px 0; }
         
-        /* הסתרת אלמנטים מיותרים */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
@@ -196,7 +198,7 @@ def show_chart(ticker):
     except: st.caption("Chart unavailable")
 
 # ==========================================
-# 4. מסך התחברות והרשמה משולב (Split Screen)
+# 4. מסך התחברות והרשמה (עם כפתורים ריבועיים)
 # ==========================================
 def auth_page():
     col_img, col_form = st.columns([1.5, 1])
@@ -214,7 +216,7 @@ def auth_page():
         
         tab_login, tab_signup = st.tabs(["LOG IN", "SIGN UP"])
         
-        # --- TAB 1: LOG IN (מעודכן עם כפתורים חדשים) ---
+        # --- TAB 1: LOG IN ---
         with tab_login:
             st.markdown("<br>", unsafe_allow_html=True)
             l_email = st.text_input("Email Address", key="l_email")
@@ -231,16 +233,21 @@ def auth_page():
                 else:
                     st.error("Invalid Credentials")
             
-            # --- כפתורי סושיאל מעודכנים ---
+            # --- אזור האייקונים בלבד ---
             st.markdown('<div class="divider-text">— OR CONTINUE WITH —</div>', unsafe_allow_html=True)
             
-            # שימוש בכפתורים רחבים אחד מתחת לשני עם אימוג'י וטקסט ברור
-            # ה-CSS הקיים כבר דואג שהם יהיו כתומים ולרוחב מלא
-            st.button("🌐 Continue with Google", key="g_btn")
-            st.button("🍎 Continue with Apple", key="a_btn")
-            st.button("🔗 Continue with LinkedIn", key="l_btn")
+            # יצירת 5 עמודות כדי למרכז את ה-3 האמצעיות וליצור כפתורים קטנים
+            # העמודות הצרות (col_a, col_b, col_c) יגרמו לכפתורים להיות ריבועיים וקטנים
+            gap1, col_g, col_a, col_l, gap2 = st.columns([2, 1, 1, 1, 2])
+            
+            with col_g:
+                st.button("G", key="icon_g", help="Google")
+            with col_a:
+                st.button("", key="icon_a", help="Apple")
+            with col_l:
+                st.button("in", key="icon_l", help="LinkedIn")
 
-        # --- TAB 2: SIGN UP (ללא שינוי) ---
+        # --- TAB 2: SIGN UP ---
         with tab_signup:
             st.markdown("<br>", unsafe_allow_html=True)
             s_email = st.text_input("New Email", key="s_email")
