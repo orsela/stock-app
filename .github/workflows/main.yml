@@ -1,0 +1,31 @@
+name: StockWatcher Bot
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # ירוץ כל 15 דקות
+  workflow_dispatch:      # מאפשר הרצה ידנית לבדיקה
+
+jobs:
+  run-scheduler:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install libraries
+        run: |
+          pip install --upgrade pip
+          pip install gspread oauth2client yfinance pandas
+
+      - name: Create secrets.json
+        run: |
+          echo '${{ secrets.GCP_JSON }}' > secrets.json
+
+      - name: Run Scheduler
+        run: python scheduler.py
