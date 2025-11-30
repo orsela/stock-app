@@ -31,12 +31,10 @@ def apply_terminal_css():
 
         /* Typography */
         h1, h2, h3, h4, h5, h6, p, label, .stMetricLabel { color: #FFFFFF !important; opacity: 1 !important; }
-        
-        /* לוגו מרכזי (למסך כניסה) */
         .logo-title { font-size: 3rem; font-weight: 900; text-align: center; margin-bottom: 5px; letter-spacing: -1px; }
         .logo-subtitle { font-family: 'JetBrains Mono', monospace; color: #FF7F50; font-size: 1rem; text-align: center; margin-bottom: 30px; letter-spacing: 1px; }
-
-        /* לוגו לדשבורד (מיושר לשמאל) */
+        
+        /* Dashboard Logo */
         .dashboard-logo { font-size: 2.2rem; font-weight: 900; color: #FFFFFF; margin: 0; letter-spacing: -1px; line-height: 1; }
         .dashboard-sub { font-family: 'JetBrains Mono', monospace; color: #FF7F50; font-size: 0.8rem; letter-spacing: 1px; }
 
@@ -243,11 +241,7 @@ def auth_page():
                 if add_user_to_db(ne, np, ph): st.success("Created.")
                 else: st.error("Error")
 
-# ==========================================
-# 5. דאשבורד (מתוקן ומפושט)
-# ==========================================
 def dashboard_page():
-    # Ticker Tape
     metrics = get_top_metrics()
     tape_html = ""
     for k, v in metrics.items():
@@ -272,7 +266,6 @@ def dashboard_page():
             st.session_state.page = 'auth'
             st.rerun()
 
-    # Cards
     cols = st.columns(4)
     i = 0
     for k, v in metrics.items():
@@ -371,23 +364,21 @@ def dashboard_page():
                             for i, row in my_df.iterrows():
                                 sym = row['symbol']
                                 
-                                # --- תיקון: פישוט הקוד למניעת שגיאות סינטקס ---
+                                # --- תיקון סופי לשגיאת הסינטקס ---
                                 t_max_val = row.get('max_price')
                                 t_min_val = row.get('min_price')
                                 t_max = safe_float(t_max_val)
                                 t_min = safe_float(t_min_val)
-                                
-                                target = 0.0
-                                if t_max > 0:
-                                    target = t_max
-                                else:
-                                    target = t_min
+                                target = t_max if t_max > 0 else t_min
                                 
                                 v_raw = safe_float(row.get('min_volume'))
                                 vol_display = str(v_raw)[:2]
 
-                                # שורת השגיאה המקורית הייתה כאן - כעת היא מופרדת
-                                stock_info = get_stock_analysis(sym)
+                                # קריאה לפונקציה בשורה נפרדת לחלוטין למניעת שגיאות
+                                try:
+                                    stock_info = get_stock_analysis(sym)
+                                except:
+                                    stock_info = None
                                 
                                 cp = 0.0
                                 ma = 0.0
@@ -410,6 +401,7 @@ def dashboard_page():
                                         render_chart(stock_info['hist'], "")
                                         
             except Exception as e: st.error(f"List Error: {e}")
+
 def archive_page():
     st.title("🗄️ ARCHIVE")
     if st.button("BACK"): 
@@ -438,4 +430,3 @@ if st.session_state.logged_in:
     else: dashboard_page()
 else:
     auth_page()
-
