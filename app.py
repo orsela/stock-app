@@ -156,27 +156,6 @@ def apply_terminal_css():
     import streamlit as st
 import yfinance as yf
 
-def test_yahoo_connection() -> bool:
-    """בודק אם ניתן לקבל נתונים חיים מ-Yahoo Finance ומציג התרעה בזמן אמת."""
-    try:
-        t = yf.Ticker("NVDA")
-        hist = t.history(period="1d")
-        if hist.empty:
-            st.warning("אין נתונים זמינים מ-Yahoo Finance כרגע עבור NVDA [finance:NVIDIA Corporation].")
-            return False
-        price = hist['Close'].iloc[-1]
-        st.success(f"Yahoo Finance מחובר. מחיר NVDA העדכני: ${price:.2f}")
-        return True
-    except Exception as e:
-        st.error(f"שגיאה בחיבור ל-Yahoo Finance: {str(e)}")
-        return False
-
-# שימוש בדשבורד או בדף הראשי
-if st.session_state.get('logged_in', False):
-    if not test_yahoo_connection():
-        st.warning("פוטנציאל לבעיה בעדכון נתונים מהאינטרנט. אנא בדוק חיבור רשת או השרת.")
-
-
 # ==========================================
 # 3. HELPERS & BACKEND
 # ==========================================
