@@ -378,15 +378,7 @@ def main_dashboard():
             else:
                 st.info("אין התראות פעילות כרגע.")
 
-            # --- "פח האשפה" (כאזור הדרכה) ---
-            st.markdown("""
-            <div class="trash-can-area">
-                <i class="fa-solid fa-trash-can trash-icon"></i>
-                <p>לחץ על 'סגור התראה' כדי למחוק אותה מהלוח.</p>
-                <p style="font-size:0.8em; margin-top: 10px;">(גרירה ושחרור אינה נתמכת ברכיבי Streamlit מותאמים אישית)</p>
-            </div>
-            """, unsafe_allow_html=True)
-
+         
     # =========================================================================
     # כרטיסייה 2: ניתוח מניה
     # =========================================================================
@@ -454,3 +446,4 @@ if not st.session_state['logged_in']:
     login_page()
 else:
     main_dashboard()
+
