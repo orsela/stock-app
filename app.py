@@ -1,107 +1,141 @@
 import streamlit as st
 import yfinance as yf
-from datetime import datetime
+import pandas as pd
+from datetime import datetime, timedelta
+import time
+import threading
 
-# הגדרות בסיסיות
-st.set_page_config(page_title="StockPulse 💹", layout="wide")
+# הגדרות
+st.set_page_config(page_title="StockPulse Pro 💹", layout="wide")
 
-# ניהול מצב
-if 'logged_in' not in st.session_state:
-    st.session_state.logged_in = False
-if 'alerts' not in st.session_state:
-    st.session_state.alerts = []
+# מצב
+if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+if 'alerts' not in st.session_state: st.session_state.alerts = []
+if 'prices' not in st.session_state: st.session_state.prices = {}
+if 'last_check' not in st.session_state: st.session_state.last_check = None
 
-# ==========================================
+def get_live_price(ticker):
+    try:
+        stock = yf.Ticker(ticker)
+        data = stock.history(period="1d", interval="5m")
+        if len(data) > 0:
+            return data['Close'][-1]
+    except:
+        return None
+    return None
+
+def check_alerts():
+    if not st.session_state.alerts:
+        return
+    
+    now = datetime.now()
+    for alert in st.session_state.alerts[:]:  # Copy to avoid modification during iteration
+        price = get_live_price(alert['ticker'])
+        if price:
+            prev_price = st.session_state.prices.get(alert['ticker'])
+            if prev_price:
+                change = ((price - prev_price) / prev_price) * 100
+                if abs(change) >= alert['target']:
+                    st.session_state.alerts.remove(alert)
+                    st.session_state.prices[alert['ticker']] = price
+                    st.success(f"🚨 **התראה!** {alert['ticker']} שינוי {change:.1f}% - מחיר: ${price:.2f}")
+            st.session_state.prices[alert['ticker']] = price
+
+@st.cache_data(ttl=30)
+def get_market_data():
+    tickers = {'^GSPC': 'S&P 500', '^IXIC': 'NASDAQ', 'BTC-USD': 'Bitcoin', '^VIX': 'VIX'}
+    data = {}
+    for sym, name in tickers.items():
+        try:
+            stock = yf.Ticker(sym)
+            hist = stock.history(period="2d")
+            if len(hist) > 1:
+                current, prev = hist['Close'][-1], hist['Close'][-2]
+                change = ((current - prev) / prev) * 100
+                data[name] = (current, change)
+        except:
+            pass
+    return data
+
 # דף כניסה
-# ==========================================
 def login_page():
-    st.title("💹 StockPulse Terminal")
-    st.markdown("### המסוף המתקדם להתראות מניות")
+    st.title("💹 StockPulse Pro")
+    st.markdown("### מסוף התראות מניות **בזמן אמת**")
     
     with st.form("login"):
-        email = st.text_input("📧 אימייל", value="admin")
-        password = st.text_input("🔒 סיסמה", type="password", value="123")
-        
         col1, col2 = st.columns(2)
         with col1:
+            email = st.text_input("אימייל", value="admin")
+            password = st.text_input("סיסמה", type="password", value="123")
+        with col2:
             if st.form_submit_button("🚀 התחבר"):
                 if email == "admin" and password == "123":
                     st.session_state.logged_in = True
                     st.rerun()
-                else:
-                    st.error("❌ שגוי! נסה admin/123")
-        
-        with col2:
-            if st.form_submit_button("🎯 דמו מהיר"):
+            if st.form_submit_button("🎯 דמו"):
                 st.session_state.logged_in = True
                 st.rerun()
 
-# ==========================================
-# דאשבורד
-# ==========================================
-@st.cache_data(ttl=300)
-def get_data():
-    try:
-        sp500 = yf.Ticker("^GSPC").history(period="2d")
-        nasdaq = yf.Ticker("^IXIC").history(period="2d")
-        btc = yf.Ticker("BTC-USD").history(period="2d")
-        
-        return {
-            "S&P 500": (sp500['Close'][-1], ((sp500['Close'][-1]-sp500['Close'][-2])/sp500['Close'][-2]*100)),
-            "NASDAQ": (nasdaq['Close'][-1], ((nasdaq['Close'][-1]-nasdaq['Close'][-2])/nasdaq['Close'][-2]*100)),
-            "Bitcoin": (btc['Close'][-1], ((btc['Close'][-1]-btc['Close'][-2])/btc['Close'][-2]*100))
-        }
-    except:
-        return {"S&P 500": (5200, 0.5), "NASDAQ": (18500, 1.2), "Bitcoin": (95000, -0.8)}
-
+# דאשבורד ראשי
 def dashboard():
-    st.markdown("## 💹 נתוני שוק חיים")
+    # בדיקת התראות כל 30 שניות
+    if st.session_state.last_check is None or (datetime.now() - st.session_state.last_check).seconds > 30:
+        check_alerts()
+        st.session_state.last_check = datetime.now()
     
-    # מדדים
-    data = get_data()
-    col1, col2, col3 = st.columns(3)
+    st.markdown(f"## 💹 שלום! מערכת פעילה - בדיקה אחרונה: {st.session_state.last_check.strftime('%H:%M:%S')}")
     
-    with col1:
-        val, change = data["S&P 500"]
-        st.metric("S&P 500", f"{val:,.0f}", f"{change:.2f}%")
-    
-    with col2:
-        val, change = data["NASDAQ"]
-        st.metric("NASDAQ", f"{val:,.0f}", f"{change:.2f}%")
-    
-    with col3:
-        val, change = data["Bitcoin"]
-        st.metric("Bitcoin", f"${val:,.0f}", f"{change:.2f}%")
+    # מדדי שוק
+    st.markdown("### 📊 נתוני שוק חיים")
+    data = get_market_data()
+    cols = st.columns(4)
+    for i, (name, (val, chg)) in enumerate(data.items()):
+        with cols[i]:
+            st.metric(name, f"{val:,.0f}", f"{chg:.2f}%")
     
     # התראות
-    col_left, col_right = st.columns([2,1])
+    col1, col2 = st.columns([3, 1])
     
-    with col_right:
+    with col2:
         st.markdown("### ➕ התראה חדשה")
-        with st.form("alert_form"):
-            ticker = st.text_input("מניה", value="NVDA")
-            target = st.number_input("שינוי %", value=5.0)
-            if st.form_submit_button("הוסף"):
-                st.session_state.alerts.append({"ticker": ticker, "target": target})
-                st.success("✅ נוספה!")
+        with st.form("new_alert"):
+            ticker = st.text_input("סימול", value="NVDA", help="AAPL, TSLA, BTC-USD, ^GSPC")
+            target_pct = st.number_input("שינוי %", value=2.0, min_value=0.1, step=0.1)
+            notes = st.text_input("הערות")
+            
+            if st.form_submit_button("➕ הוסף", use_container_width=True):
+                alert = {
+                    'ticker': ticker.upper(),
+                    'target': target_pct,
+                    'notes': notes,
+                    'created': datetime.now().strftime("%H:%M"),
+                    'status': 'פעיל'
+                }
+                st.session_state.alerts.append(alert)
+                st.success(f"✅ {ticker} נוספה!")
                 st.rerun()
     
-    with col_left:
+    with col1:
         st.markdown("### 📋 התראות פעילות")
         if st.session_state.alerts:
-            for alert in st.session_state.alerts:
-                st.write(f"**{alert['ticker']}** - {alert['target']}%")
+            for i, alert in enumerate(st.session_state.alerts):
+                current_price = st.session_state.prices.get(alert['ticker'])
+                status = f"💰 {current_price:.2f}" if current_price else "⏳"
+                st.write(f"**{alert['ticker']}** | {alert['target']}% | {status} | {alert['notes']}")
+            
+            if st.button("🗑️ נקה הכל"):
+                st.session_state.alerts = []
+                st.rerun()
         else:
-            st.info("אין התראות")
+            st.info("➕ אין התראות - הוסף ראשונה!")
     
-    # יציאה
-    if st.button("🚪 יציאה"):
-        st.session_state.logged_in = False
+    # כפתור יציאה
+    if st.button("🚪 יציאה", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         st.rerun()
 
-# ==========================================
-# הרצה ראשית
-# ==========================================
+# הרצה
 if not st.session_state.logged_in:
     login_page()
 else:
