@@ -8,6 +8,8 @@ import hashlib
 import plotly.graph_objects as go
 import re
 
+
+
 # ==========================================
 # 1. CONFIGURATION
 # ==========================================
@@ -240,6 +242,13 @@ def apply_dynamic_css(dark_mode: bool):
 
 # ... (כל שאר פונקציות ה-backend נשמרות כפי שהן כולל login_user עם backdoor)
 
+def apply_terminal_css():
+    # תאימות לאחור: אם אין מצב שמור, ברירת מחדל מצב לילה
+    if 'dark_mode' not in st.session_state:
+        st.session_state.dark_mode = True
+    apply_dynamic_css(st.session_state.dark_mode)
+
+
 def auth_page():
     apply_terminal_css()
     col_img, col_form = st.columns([1.5, 1])
@@ -280,11 +289,13 @@ def auth_page():
 
 def dashboard_page():
     if 'dark_mode' not in st.session_state:
-        st.session_state.dark_mode = True  # ברירת המחדל: לילה
+        st.session_state.dark_mode = True
 
     toggle = st.sidebar.checkbox("מצב לילה / יום", value=st.session_state.dark_mode, help="החלף בין מצב יום ומצב לילה")
     st.session_state.dark_mode = toggle
-    apply_dynamic_css(st.session_state.dark_mode)
+
+    apply_terminal_css()  # במקום apply_dynamic_css(...)
+
 
     if not test_yahoo_connection_cached():
         st.warning("בעיית חיבור ל-Yahoo Finance, ייתכן שהנתונים לא יתעדכנו בזמן אמת.")
@@ -436,3 +447,4 @@ else:
         st.markdown("דף ארכיון יבוא בהמשך…")
     else:
         dashboard_page()
+
