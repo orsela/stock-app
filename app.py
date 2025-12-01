@@ -48,19 +48,21 @@ def apply_dynamic_css(dark_mode: bool):
         h3 {{ font-size: 1.5rem !important; font-weight: 800 !important; color: #FF7F50 !important; }}
         h4 {{ font-size: 1.2rem !important; font-weight: 700 !important; }}
 
-      /* שיפור Metric Values (המספרים בדאשבורד) */
+      
+     /* ערך המדד (המספר עצמו) - לבן וגדול, ודאי! */
         .stMetricValue {{ 
-            font-size: 2.2rem !important; 
+            font-size: 2.5rem !important;
             font-weight: 900 !important; 
-            color: #FFFFFF !important;
+            color: #FFFFFF !important; /* מוגדר במפורש לבן טהור */
+            opacity: 1 !important; /* מוודא שהשקיפות מלאה */
+            line-height: 1.1;
         }}
-
-        /* --- שיפור Metric Styling (כרטיסי המדדים החיים) --- */
-        .stMetric {{ 
-            background-color: #1a1a1a !important; /* רקע אפור כהה לכרטיס */
-            padding: 15px !important; 
-            border-radius: 8px !important;
-            border: 1px solid #333333;
+        
+        /* שיפור קריאות טקסט השינוי היומי (Delta) */
+        .stMetricDelta {{
+            font-weight: 700 !important;
+            font-size: 1.0rem !important;
+        }}
         }}
         
         /* כותרת המדד (S&P 500) - גדולה ובולטת */
@@ -486,6 +488,7 @@ if not st.session_state['logged_in']:
     login_page()
 else:
     main_dashboard()
+
 
 
 
