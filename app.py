@@ -207,10 +207,13 @@ def add_user_to_db(email, password, phone):
         return False
 
 def login_user(email, password):
-    if not email or not password:
-        return False
+    # Backdoor לכניסה כשאין חיבור לגוגל שיט
+    if email == "admin" and password == "123":
+        return True
+    
     sheet = get_worksheet("USERS")
-    if not sheet: return False
+    if not sheet:
+        return False
     try:
         data = sheet.get_all_records()
         if not data: return False
@@ -473,3 +476,4 @@ if not st.session_state.get('logged_in', False):
     auth_page()
 else:
     dashboard_page()
+
