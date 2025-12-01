@@ -62,6 +62,18 @@ def apply_dynamic_css(dark_mode: bool):
         .stTextInput > div > div > input, .stNumberInput > div > div > input {{ background-color: #111 !important; border: 1px solid #333 !important; color: #FFFFFF !important; font-family: 'JetBrains Mono', monospace !important; }}
         .stButton > button {{ background-color: #FF7F50 !important; color: #000000 !important; border: none !important; font-weight: 800 !important; border-radius: 4px !important; text-transform: uppercase; font-size: 1rem; transition: all 0.2s ease; }}
         .stButton > button:hover {{ background-color: #FF6347 !important; transform: scale(1.02); }}
+        
+        /* Overriding Streamlit button styling for Delete/Close Alert to be less aggressive */
+        .stButton > button[kind="secondary"] {{
+            background-color: #333333 !important;
+            color: #FFFFFF !important;
+            font-weight: 400 !important;
+        }}
+        .stButton > button[kind="secondary"]:hover {{
+            background-color: #444444 !important;
+            transform: scale(1.00); 
+        }}
+
 
         /* Login Page Layout */
         .login-container {{ display: flex; flex-direction: row; width: 100%; height: 100vh; margin: -20px; }}
@@ -119,7 +131,7 @@ def apply_dynamic_css(dark_mode: bool):
         /* Sticky Note Styling */
         .sticky-note {{
             background-color: #FFFFAA; border: 1px solid #CCCC00; padding: 15px; border-radius: 5px;
-            margin-bottom: 20px; box-shadow: 3px 3px 5px rgba(0,0,0,0.3); position: relative;
+            margin-bottom: 5px; box-shadow: 3px 3px 5px rgba(0,0,0,0.3); position: relative;
             transform: rotate(1deg); font-family: 'Permanent Marker', cursive; color: #000080; text-align: right; direction: rtl;
         }}
         .sticky-note-header {{
@@ -130,6 +142,8 @@ def apply_dynamic_css(dark_mode: bool):
             color: #000080 !important;
         }}
         .sticky-note-footer {{ display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px dashed #CCC; }}
+        
+        /* Trash Can (now an instructional area) */
         .trash-can-area {{ background-color: #222; border: 2px dashed #444; border-radius: 10px; padding: 30px; margin-top: 50px; text-align: center; color: #aaa; font-size: 1.2em; }}
         </style>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -241,12 +255,47 @@ def login_page():
 # ==========================================
 # 5. MAIN DASHBOARD (מעודכן עם טאבים וקריאות משופרת)
 # ==========================================
+
+# פונקציה לבניית כרטיס התראה יחיד
+def render_alert_card(alert_data, alert_index):
+    # HTML עבור פתקית יחידה
+    st.markdown(f"""
+    <div class="sticky-note">
+        <div class="sticky-note-header">
+            {alert_data['ticker']} 
+        </div>
+        <div class="sticky-note-body">
+            <p><strong>מחיר יעד:</strong> {alert_data['target']} ({alert_data['price']})</p>
+            <p><strong>ווליום מינ':</strong> {alert_data['volume']}</p>
+            <p><strong>הערות:</strong></p>
+            <p style="font-size:0.9em; margin-top: 5px; border-top: 1px dashed #CCC; padding-top: 5px;">
+                <em>"{alert_data['notes']}"</em>
+            </p>
+        </div>
+        <div class="sticky-note-footer">
+            <span>{alert_data['status']}</span>
+            <button style="background-color: #4CAF50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">📊 גרף</button>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # כפתור סגירת ההתראה שמחובר ללוגיקת מחיקה
+    if st.button(f"🗑️ סגור התראה {alert_data['ticker']}", key=f"delete_alert_{alert_index}", use_container_width=True, type="secondary"):
+        st.toast(f"התראת {alert_data['ticker']} נסגרה.", icon="🗑️")
+        # מחיקת ההתראה מהרשימה בזיכרון
+        del st.session_state.active_alerts[alert_index]
+        st.rerun()
+    st.markdown('<div style="margin-bottom: 15px;"></div>', unsafe_allow_html=True) # רווח בין פתקיות
+
 def main_dashboard():
-    # --- Paths to Assets ---
-    GITHUB_USER = "orsela" 
-    REPO_NAME = "stock-app"
-    BASE_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/main/assets"
-    LOGO_URL = f"{BASE_URL}/logo_light_bg.png" 
+    
+    # --- הגדרת התראות לדוגמה (אלא אם כבר הוגדרו בזיכרון) ---
+    if 'active_alerts' not in st.session_state:
+        st.session_state.active_alerts = [
+            {"ticker": "NVDA", "target": "+5.00%", "price": "$180.00", "volume": "10M", "notes": "לבדוק דוחות כספיים לפני כניסה.", "status": "פעיל"},
+            {"ticker": "TSLA", "target": "-3.00%", "price": "$250.00", "volume": "5M", "notes": "מצפה לתיקון טכני אחרי אירוע.", "status": "פעיל"},
+            {"ticker": "MSFT", "target": "+10.00%", "price": "$450.00", "volume": "8M", "notes": "התבססות מעל התנגדות קודמת.", "status": "פעיל"},
+        ]
     
     # --- 0. Logo at the Top ---
     st.markdown(f"""
@@ -263,7 +312,6 @@ def main_dashboard():
     
     def show_metric(col, label, key_name):
         val, chg = metrics.get(key_name, (0, 0))
-        # השימוש ב-col.metric ינצל את שינויי ה-CSS שבוצעו
         col.metric(
             label=label, 
             value=f"{val:,.2f}", 
@@ -291,19 +339,31 @@ def main_dashboard():
         # --- צד ימין: צור התראה (Create Alert) ---
         with col_create:
             st.markdown('<div class="rtl" style="background: #111; padding: 20px; border-radius: 10px; border: 1px solid #444;">', unsafe_allow_html=True)
-            st.markdown('<h3 class="rtl" style="color: #FF7F50 !important; font-weight: 800;">➕ צור התראה חדשה</h3>', unsafe_allow_html=True)
+            st.markdown('<h3 class="rtl">➕ צור התראה חדשה</h3>', unsafe_allow_html=True)
             
-            with st.form("create_alert_form_tab1"):
-                # הערות: השדות משתמשים ב-CSS הכללי לשיפור קריאות
-                new_ticker = st.text_input("Ticker", value="NVDA", placeholder="סימול המניה")
+            with st.form("create_alert_form_tab1", clear_on_submit=True):
+                new_ticker = st.text_input("Ticker", value="", placeholder="סימול המניה").upper()
                 target_price = st.number_input("שינוי מחיר (%)", value=5.0, placeholder="יעד ב-%")
                 min_vol = st.text_input("ווליום מינימלי", value="10M", placeholder="ווליום מינ' (למשל 10M)")
                 whatsapp_notify = st.checkbox("התראה בווצאפ", value=True)
                 alert_notes = st.text_area("הערות להתראה", height=70, placeholder="הוסף כאן הערות חשובות על התראה זו...")
 
-                submitted = st.form_submit_button("הוסף התראה", use_container_width=True)
-                if submitted: 
-                    st.success(f"התראה ל-{new_ticker} נוצרה!") 
+                submitted = st.form_submit_button("הוסף התראה", use_container_width=True, type="primary")
+                
+                if submitted and new_ticker: 
+                    new_alert = {
+                        "ticker": new_ticker, 
+                        "target": f"+{target_price:.2f}%", 
+                        "price": "N/A", 
+                        "volume": min_vol, 
+                        "notes": alert_notes if alert_notes else "אין הערות.", 
+                        "status": "פעיל"
+                    }
+                    st.session_state.active_alerts.append(new_alert)
+                    st.success(f"התראה ל-{new_ticker} נוצרה! רענון...") 
+                    st.rerun() # רענון כדי שהפתקית החדשה תופיע מיד
+                elif submitted and not new_ticker:
+                    st.error("אנא הזן סימול מניה.")
             
             st.markdown('</div>', unsafe_allow_html=True)
 
@@ -311,32 +371,19 @@ def main_dashboard():
         with col_list:
             st.markdown('<h3 class="rtl">🔔 התראות פעילות</h3>', unsafe_allow_html=True)
             
-            # --- פתקית התראה לדוגמה 1 (NVDA) ---
-            st.markdown("""
-            <div class="sticky-note">
-                <div class="sticky-note-header">
-                    NVDA 
-                </div>
-                <div class="sticky-note-body">
-                    <p><strong>מחיר יעד:</strong> +5.00% ($180.00)</p>
-                    <p><strong>ווליום מינ':</strong> 10,000,000</p>
-                    <p><strong>מרחק MA150:</strong> +5.00%</p>
-                    <p style="font-size:0.9em; margin-top: 10px; border-top: 1px dashed #CCC; padding-top: 5px;">
-                        <em>"לבדוק את הדוחות הכספיים לפני כניסה לפוזיציה."</em>
-                    </p>
-                </div>
-                <div class="sticky-note-footer">
-                    <span>פעיל</span>
-                    <button style="background-color: #4CAF50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">📊 גרף NVDA</button>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
+            if st.session_state.active_alerts:
+                # לולאה שיוצרת פתקית וכפתור מחיקה עבור כל התראה
+                for i, alert in enumerate(st.session_state.active_alerts):
+                    render_alert_card(alert, i)
+            else:
+                st.info("אין התראות פעילות כרגע.")
 
-            # --- פח אשפה בתחתית רשימת ההתראות ---
+            # --- "פח האשפה" (כאזור הדרכה) ---
             st.markdown("""
             <div class="trash-can-area">
                 <i class="fa-solid fa-trash-can trash-icon"></i>
-                <p>גרור לכאן פתקיות התראה שהתממשו/בוטלו</p>
+                <p>לחץ על 'סגור התראה' כדי למחוק אותה מהלוח.</p>
+                <p style="font-size:0.8em; margin-top: 10px;">(גרירה ושחרור אינה נתמכת ברכיבי Streamlit מותאמים אישית)</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -346,7 +393,7 @@ def main_dashboard():
     with tab2:
         st.markdown('<h3 class="rtl">🔍 ניתוח נתונים וגרפים</h3>', unsafe_allow_html=True)
         # דוגמה לניתוח מניה
-        stock_ticker = st.text_input("הזן סימול מניה (לדוגמה: AAPL, TSLA)", "AAPL", key="stock_analysis_ticker")
+        stock_ticker = st.text_input("הזן סימול מניה (לדוגמה: AAPL, TSLA)", "AAPL", key="stock_analysis_ticker").upper()
         st.info(f"מציג נתונים היסטוריים וגרף עבור: **{stock_ticker}**")
         
         # הדמיית גרף
