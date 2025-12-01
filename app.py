@@ -224,6 +224,63 @@ def login_page():
 # 5. MAIN DASHBOARD
 # ==========================================
 def main_dashboard():
+    # --- Paths to Assets ---
+    GITHUB_USER = "orsela" 
+    REPO_NAME = "stock-app"
+    BASE_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/main/assets"
+    LOGO_URL = f"{BASE_URL}/logo_light_bg.png" 
+    
+    # --- CSS: עדכון צבע הפתקית לכחול כהה (#000080) ---
+    st.markdown("""
+        <style>
+        /* Sticky Note Styling */
+        .sticky-note {
+            background-color: #FFFFAA; 
+            border: 1px solid #CCCC00;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            box-shadow: 3px 3px 5px rgba(0,0,0,0.3);
+            position: relative;
+            transform: rotate(1deg); 
+            max-width: 300px; 
+            display: flex;
+            flex-direction: column;
+            font-family: 'Permanent Marker', cursive;
+            color: #000080; /* שינוי: טקסט ראשי לכחול כהה */
+            text-align: right; /* יישור הטקסט הראשי לעברית */
+            direction: rtl;
+        }
+        .sticky-note-header {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #000080; /* שינוי: כחול כהה */
+            border-bottom: 1px dashed #CCC;
+            padding-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sticky-note-body p {
+            color: #000080 !important; /* ודא שהטקסט בתוך ה-p הוא כחול כהה */
+        }
+        .sticky-note-footer {
+            font-size: 0.8em;
+            color: #000080; /* שינוי: כחול כהה */
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px dashed #CCC;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .trash-can-area {
+            background-color: #222; border: 2px dashed #444; border-radius: 10px; padding: 30px; margin-top: 50px; text-align: center; color: #aaa; font-size: 1.2em;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
     # --- 0. Logo at the Top ---
     st.markdown(f"""
         <div class="dashboard-logo-img-container">
@@ -231,11 +288,10 @@ def main_dashboard():
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 1. Top Metrics Row (נתוני שוק חיים) ---
+    # --- 1. Top Metrics Row ---
     st.markdown('<h3 class="rtl">נתוני שוק חיים</h3>', unsafe_allow_html=True)
     
     metrics = get_top_metrics() 
-    
     m1, m2, m3, m4 = st.columns(4)
     
     def show_metric(col, label, key_name):
@@ -294,28 +350,7 @@ def main_dashboard():
         </div>
         """, unsafe_allow_html=True)
 
-        # --- פתקית התראה לדוגמה 2 (TSLA) ---
-        st.markdown("""
-        <div class="sticky-note" style="transform: rotate(-2deg); margin-left: 20px;">
-            <div class="sticky-note-header">
-                TSLA
-            </div>
-            <div class="sticky-note-body">
-                <p><strong>מחיר יעד:</strong> -2.30% ($240.00)</p>
-                <p><strong>ווליום מינ':</strong> 5,200,000</p>
-                <p><strong>מרחק MA150:</strong> -1.20%</p>
-                <p style="font-size:0.9em; margin-top: 10px; border-top: 1px dashed #CCC; padding-top: 5px;">
-                    <em>"לשים לב להודעות של מאסק בטוויטר, יכול להשפיע."</em>
-                </p>
-            </div>
-            <div class="sticky-note-footer">
-                <span>פעיל</span>
-                <button style="background-color: #4CAF50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">📊 גרף TSLA</button>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # --- פח אשפה ---
+        # --- פח אשפה בתחתית רשימת ההתראות ---
         st.markdown("""
         <div class="trash-can-area">
             <i class="fa-solid fa-trash-can trash-icon"></i>
@@ -326,7 +361,6 @@ def main_dashboard():
     if st.button("יציאה", key="logout_btn", use_container_width=True):
         st.session_state['logged_in'] = False
         st.rerun()
-
 # ==========================================
 # 6. MAIN ROUTING LOGIC
 # ==========================================
@@ -337,3 +371,4 @@ if not st.session_state['logged_in']:
     login_page()
 else:
     main_dashboard()
+
