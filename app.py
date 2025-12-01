@@ -27,8 +27,8 @@ def apply_terminal_css():
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono:wght@400;700&display=swap');
 
     .stApp {
-      background-color: #000000; 
-      color: #FFFFFF; 
+      background-color: #000000;
+      color: #FFFFFF;
       font-family: 'Inter', sans-serif;
     }
     #MainMenu, footer, header, .stDeployButton { visibility: hidden; }
@@ -153,8 +153,6 @@ def apply_terminal_css():
     }
     </style>
     """, unsafe_allow_html=True)
-    import streamlit as st
-import yfinance as yf
 
 # ==========================================
 # 3. HELPERS & BACKEND
@@ -209,13 +207,14 @@ def add_user_to_db(email, password, phone):
         return False
 
 def login_user(email, password):
-    # Backdoor לכניסה כשאין חיבור לגוגל שיט
+    # backdoor for admin user
     if email == "admin" and password == "123":
         return True
     
-    sheet = get_worksheet("USERS")
-    if not sheet:
+    if not email or not password:
         return False
+    sheet = get_worksheet("USERS")
+    if not sheet: return False
     try:
         data = sheet.get_all_records()
         if not data: return False
@@ -297,6 +296,16 @@ def render_chart(hist, title):
     )
     st.plotly_chart(fig, use_container_width=True)
 
+@st.cache_data(ttl=60)
+def test_yahoo_connection_cached() -> bool:
+    try:
+        data = yf.download("NVDA", period="1d", progress=False)
+        if data.empty:
+            return False
+        return True
+    except:
+        return False
+
 # ==========================================
 # 4. UI PAGES
 # ==========================================
@@ -314,169 +323,4 @@ def auth_page():
         tab_login, tab_signup = st.tabs(["LOG IN", "SIGN UP"])
 
         with tab_login:
-            email = st.text_input("Email", placeholder="you@example.com", key="login_email")
-            password = st.text_input("Password", type="password", key="login_password")
-            if st.button("Authenticate", use_container_width=True):
-                if login_user(email, password):
-                    st.session_state['user_email'] = email
-                    st.session_state['logged_in'] = True
-                    st.session_state['page'] = 'dashboard'
-                    st.rerun()
-                else:
-                    st.error("Invalid credentials")
-
-        with tab_signup:
-            new_email = st.text_input("Email", placeholder="you@example.com", key="signup_email")
-            new_password = st.text_input("Password", type="password", key="signup_password")
-            phone = st.text_input("WhatsApp Phone (+972...)", key="signup_phone")
-            if st.button("Create Account", use_container_width=True):
-                if add_user_to_db(new_email, new_password, phone):
-                    st.success("Account created successfully!")
-                else:
-                    st.error("Error creating account")
-
-def dashboard_page():
-    apply_terminal_css()
-
-    # 1. Market Ticker Bar
-    metrics = get_top_metrics()
-    tape_html = ''
-    for k, v in metrics.items():
-        color = "#00FF00" if v[1] >= 0 else "#FF0000"
-        tape_html += f'<div class="ticker-item">{k}: <span style="color:{color}">{v[0]:,.2f} ({v[1]:+.2f}%)</span></div>'
-    st.markdown(f'<div class="ticker-wrap"><div class="ticker-move">{tape_html * 3}</div></div>', unsafe_allow_html=True)
-
-    # 2. Header + Logout
-    c1, c2 = st.columns([8,1])
-    with c1:
-        st.markdown("""
-        <div>
-            <div class="dashboard-logo">STOCKPULSE</div>
-            <div class="dashboard-sub">LIVE TERMINAL</div>
-        </div>
-        """, unsafe_allow_html=True)
-    with c2:
-        if st.button("Logout"):
-            st.session_state.clear()
-            st.rerun()
-    
-    st.markdown("---")
-
-    # 3. Metrics Cards
-    cols = st.columns(4)
-    for i, (name, val) in enumerate(metrics.items()):
-        with cols[i]:
-            clr = "#10B981" if val[1] >= 0 else "#EF4444"
-            st.markdown(f"""
-            <div class="metric-card">
-                <div style="color:#888; font-size:0.8rem;">{name}</div>
-                <div style="font-family:'JetBrains Mono'; font-size:1.5rem; color:#fff;">{val[0]:,.2f}</div>
-                <div style="color:{clr}; font-weight:bold;">{val[1]:+.2f}%</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.markdown("---")
-
-    # 4. Split Screen: Watchlist Left, Quick Action Right
-    col_watchlist, col_quick_action = st.columns([3, 1])
-
-    with col_quick_action:
-        st.markdown("### ⚡ Quick Action")
-        symbol = st.text_input("Search Ticker", value="NVDA").upper()
-        if not symbol:
-            st.info("Enter a ticker symbol above to see analysis.")
-            return
-
-        data = get_stock_analysis(symbol)
-        if data is None:
-            st.error("Ticker not found or no data available.")
-            return
-
-        price = data['price']
-        ma150 = data['ma150']
-
-        st.markdown(f"""
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h1 class="stock-header">{symbol}</h1>
-            <span class="stock-price-lg">${price:,.2f}</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-        diff_ma = ((price - ma150) / ma150) * 100 if ma150 else 0
-        ma_color = "#10B981" if diff_ma > 0 else "#EF4444"
-        st.markdown(f"""
-        <div class="ma-box">
-            <span style="color:#888;">MA 150:</span>
-            <span style="font-family:'JetBrains Mono'; color:#fff; font-size:1.2rem;">${ma150:,.2f}</span>
-            <span style="color:{ma_color}; margin-left:10px;">({diff_ma:+.2f}%)</span>
-        </div>
-        """, unsafe_allow_html=True)
-
-        render_chart(data['hist'], f"{symbol} - 1 Year")
-
-        # Target price input + slider synced
-        if 'target_price' not in st.session_state or st.session_state['target_price'] == 0:
-            st.session_state['target_price'] = price
-
-        def update_input(): st.session_state.target_price = st.session_state.n_input
-        def update_slider(): st.session_state.target_price = st.session_state.n_slider
-
-        max_slider = price * 3 if price > 0 else 1000.0
-
-        st.number_input("Manual Target Price ($)", value=float(st.session_state.target_price),
-                        step=0.5, key='n_input', on_change=update_input)
-        st.slider("Adjust Target", min_value=0.0, max_value=max_slider,
-                  value=float(st.session_state.target_price), step=0.1,
-                  key='n_slider', on_change=update_slider)
-
-        final_target = st.session_state.target_price
-        direction = "BUY BELOW" if final_target < price else "SELL ABOVE"
-        st.markdown(f"**{direction}:** <span style='color:#FF7F50; font-family:JetBrains Mono; font-size:1.2rem;'>${final_target:.2f}</span>", unsafe_allow_html=True)
-
-        vol = st.number_input("Minimum Volume (M)", value=5.0, step=1.0, format="%.1f")
-
-        if st.button("Activate Alert", use_container_width=True):
-            min_price = final_target if final_target < price else 0
-            max_price = final_target if final_target > price else 0
-            save_alert(symbol, min_price, max_price, vol * 1_000_000, True)
-
-    # Watchlist (placeholder data for now)
-    with col_watchlist:
-        st.markdown("### 📋 Watchlist Alerts")
-
-        # Sample alert entries (replace by DB load later)
-        sample_alerts = [
-            {"symbol": "NVDA", "chg": 5.0, "price": 180.0, "vol": 10000000, "ma_dist": 5.0, "active": True},
-            {"symbol": "TSLA", "chg": -2.3, "price": 240.0, "vol": 5200000, "ma_dist": -1.2, "active": True},
-        ]
-
-        for alert in sample_alerts:
-            border_color = "#4CAF50" if alert["chg"] >= 0 else "#FF5555"
-            st.markdown(f"""
-                <div class="alert-card" style="border-right-color: {border_color};">
-                    <div class="alert-header">
-                        <div>
-                            {alert['symbol']} 
-                            <span style="color:{'#4CAF50' if alert['chg']>=0 else '#FF5555'}; font-weight:bold;">{alert['chg']:+.2f}%</span> | ${alert['price']:,.2f}
-                        </div>
-                        <div class="alert-vol">
-                            ווליום: {alert['vol']:,}<br>
-                            מרחק ממוצע 150: {alert['ma_dist']:+.2f}%
-                        </div>
-                    </div>
-                </div>
-            """, unsafe_allow_html=True)
-
-        # Activation toggles and graph buttons can be added similarly below each alert if desired.
-
-# ==========================================
-# MAIN
-# ==========================================
-apply_terminal_css()
-
-if not st.session_state.get('logged_in', False):
-    auth_page()
-else:
-    dashboard_page()
-
-
+            email = st.text_input("Email", placeholder
