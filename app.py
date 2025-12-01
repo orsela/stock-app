@@ -185,17 +185,78 @@ def login_page():
                 st.error("Login Failed")
  
 def main_dashboard():
-    # פשוט מאוד כרגע - רק כדי לוודא שהמערכת עולה
-    st.markdown('<div class="stock-header">Dashboard Active</div>', unsafe_allow_html=True)
-    st.write(f"Welcome back, {st.session_state['user_email']}")
+    # --- 1. Top Ticker Animation ---
+    # רשימת מניות לדוגמה שרצה למעלה
+    st.markdown("""
+        <div class="ticker-wrap">
+        <div class="ticker-move">
+            <div class="ticker-item">AAPL 185.92 (+1.2%)</div>
+            <div class="ticker-item">TSLA 240.50 (-0.8%)</div>
+            <div class="ticker-item">NVDA 490.10 (+2.1%)</div>
+            <div class="ticker-item">GOOGL 138.40 (+0.5%)</div>
+            <div class="ticker-item">AMZN 152.12 (-0.3%)</div>
+            <div class="ticker-item">MSFT 380.20 (+1.1%)</div>
+            <div class="ticker-item">BTC-USD 42,500 (+3.5%)</div>
+        </div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    # --- 2. Main Layout ---
+    st.markdown('<div class="logo-title">StockPulse Terminal</div>', unsafe_allow_html=True)
     
-    # בדיקת נתונים קטנה לראות שהאינטרנט עובד
-    metrics = get_top_metrics()
-    st.write(metrics)
+    # שורת חיפוש
+    col_search, col_btn = st.columns([4, 1])
+    with col_search:
+        symbol = st.text_input("SYMBOL SEARCH (e.g. TSLA, NVDA)", value="SPY").upper()
     
-    if st.button("Logout"):
-        st.session_state['logged_in'] = False
-        st.rerun()
+    # --- 3. Data Fetching & Visualization ---
+    if symbol:
+        data = get_stock_analysis(symbol)
+        
+        if data:
+            # תצוגת מחיר ראשית
+            st.markdown(f"""
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #FF7F50; margin:0;">{symbol}</h2>
+                <div class="stock-price-lg">${data['price']:.2f}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            # גרף נרות (Candlestick)
+            fig = go.Figure(data=[go.Candlestick(
+                x=data['hist'].index,
+                open=data['hist']['Open'],
+                high=data['hist']['High'],
+                low=data['hist']['Low'],
+                close=data['hist']['Close'],
+                name=symbol
+            )])
+            
+            fig.update_layout(
+                template="plotly_dark",
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                height=500,
+                margin=dict(l=0, r=0, t=20, b=0),
+                xaxis_rangeslider_visible=False
+            )
+            
+            st.plotly_chart(fig, use_container_width=True)
+            
+            # --- 4. Trading Controls (Buy/Sell Simulation) ---
+            st.write("---")
+            c1, c2, c3 = st.columns(3)
+            with c1:
+                st.info(f"MA150: ${data['ma150']:.2f}")
+            with c2:
+                # כפתור שמירת התראה (כרגע רק ויזואלי)
+                if st.button(f"SET ALERT FOR {symbol}"):
+                    st.success(f"Alert set for {symbol} (Simulation)")
+            with c3:
+                st.metric("Volume", f"{data['hist']['Volume'].iloc[-1]:,}")
+
+        else:
+            st.error(f"Could not find data for {symbol}. Check spelling.")
 
 # --- Main Execution Block ---
 apply_terminal_css()
@@ -204,3 +265,4 @@ if not st.session_state['logged_in']:
     login_page()
 else:
     main_dashboard()
+
