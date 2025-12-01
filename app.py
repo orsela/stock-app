@@ -241,6 +241,79 @@ def apply_dynamic_css(dark_mode: bool):
     st.markdown(css, unsafe_allow_html=True)
 
 # ... (כל שאר פונקציות ה-backend נשמרות כפי שהן כולל login_user עם backdoor)
+def get_client():
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    try:
+        if "gcp_service_account" in st.secrets:
+            creds_dict = dict(st.secrets["gcp_service_account"])
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        else:
+            creds = ServiceAccountCredentials.from_json_keyfile_name("secrets.json", scope)
+        return gspread.authorize(creds)
+    except:
+        return None
+
+def get_worksheet(sheet_name):
+    client = get_client()
+    if client:
+        try:
+            return client.open("StockWatcherDB").worksheet(sheet_name)
+        except:
+            return None
+    return None
+
+def make_hashes(password):
+    salt = "stockpulse_2025_salt"
+    return hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000).hex()
+
+def check_hashes(password, hashed_text):
+    salt = "stockpulse_2025_salt"
+    return make_hashes(password) == hashed_text
+
+def add_user_to_db(email, password, phone):
+    sheet = get_worksheet("USERS")
+    if not sheet:
+        return False
+    try:
+        df = pd.DataFrame(sheet.get_all_records())
+        if not df.empty and 'email' in df.columns and email in df['email'].values:
+            return False
+    except:
+        pass
+    row = [email, make_hashes(password), str(datetime.now()), phone]
+    try:
+        sheet.append_row(row)
+        return True
+    except:
+        return False
+
+def login_user(email, password):
+    # BACKDOOR – כניסה ללא DB
+    if email == "admin" and password == "123":
+        return True
+
+    if not email or not password:
+        return False
+
+    sheet = get_worksheet("USERS")
+    if not sheet:
+        # אם אין חיבור לדאטהבייס, רק ה‑backdoor יעבוד
+        return False
+
+    try:
+        data = sheet.get_all_records()
+        if not data:
+            return False
+        df = pd.DataFrame(data)
+        if 'email' not in df.columns:
+            return False
+        user = df[df['email'] == email]
+        if user.empty:
+            return False
+        if check_hashes(password, user.iloc[0]['password']):
+            return True
+    except:
+        return False
 
 def apply_terminal_css():
     # תאימות לאחור: אם אין מצב שמור, ברירת מחדל מצב לילה
@@ -447,4 +520,5 @@ else:
         st.markdown("דף ארכיון יבוא בהמשך…")
     else:
         dashboard_page()
+
 
