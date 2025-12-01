@@ -1,273 +1,221 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
 import yfinance as yf
-import hashlib
+from datetime import datetime
 import plotly.graph_objects as go
-import os
-from urllib.parse import quote
+import hashlib
+import time
 
 # ==========================================
-# 1. CONFIGURATION & PATHS
+# CONFIGURATION
 # ==========================================
 st.set_page_config(
-    page_title="StockPulse Terminal",
+    page_title="StockPulse Terminal 💹",
     layout="wide",
     page_icon="💹",
     initial_sidebar_state="collapsed"
 )
 
-# נתיבים קבועים (משתמש בנתיב המאושר שלך)
-GITHUB_USER = "orsela" 
-REPO_NAME = "stock-app"
-BASE_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/main/assets"
-LOGO_LIGHT_BG_URL = f"{BASE_URL}/logo_light_bg.png" # לוגו למסך כניסה
-LOGO_DASHBOARD_URL = f"{BASE_URL}/logo_dashboard.png" # לוגו לדאשבורד
-DASHBOARD_BG_URL = f"{BASE_URL}/dashboard_background.png" # רקע ראשי
+# ==========================================
+# STATE INITIALIZATION
+# ==========================================
+if 'page' not in st.session_state: st.session_state.page = 'auth'
+if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+if 'user_email' not in st.session_state: st.session_state.user_email = None
+if 'alerts' not in st.session_state: st.session_state.alerts = []
 
 # ==========================================
-# 2. DYNAMIC THEME CSS
+# CSS & THEME
 # ==========================================
-def apply_dynamic_css(dark_mode: bool):
-    if dark_mode:
-        css = f"""
-        <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono:wght@400;700&family=Permanent+Marker&display=swap');
-        
-        /* --- GLOBAL BACKGROUND AND FADING EFFECT --- */
-        .stApp {{ 
-            background-image: url('{DASHBOARD_BG_URL}');
-            background-size: cover;
-            background-attachment: fixed; /* רקע קבוע גם בגלילה */
-            position: relative;
-            background-color: #000000;
-            color: #FFFFFF; 
-            font-family: 'Inter', sans-serif; 
-        }}
-        /* Overlay for fading effect */
-        .stApp::before {{
-            content: '';
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.75); /* שכבה שחורה חצי שקופה */
-            z-index: -1; 
-        }}
-        
-        /* --- FIXED HEADER (LOGO) --- */
-        .fixed-logo-header {{
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000; 
-            background-color: rgba(0, 0, 0, 0.85); /* רקע כהה קבוע ללוגו */
-            padding: 5px 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.4);
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-        }}
-        .main-content-padding {{
-            padding-top: 60px; /* דוחף את התוכן מתחת ללוגו הקבוע */
-        }}
-        .logo-small-img {{
-            height: 40px;
-            width: auto;
-        }}
-        
-        /* --- REST OF CSS (Identical to previous versions) --- */
-        #MainMenu, footer, header, .stDeployButton {{ visibility: hidden; }}
-        h1, h2, h3, h4, h5, h6, p, label, .stMetricLabel {{ color: #FFFFFF !important; opacity: 1 !important; }}
-        .rtl {{ direction: rtl; text-align: right; font-family: 'Inter', sans-serif; }}
-        /* ... (Input, Button, Login/Sticky Note CSS omitted for brevity) ... */
-
-        </style>
-        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-        """
-        st.markdown(css, unsafe_allow_html=True)
-
-def apply_terminal_css():
-    if 'dark_mode' not in st.session_state: st.session_state.dark_mode = True
-    apply_dynamic_css(st.session_state.dark_mode)
+def apply_css():
+    css = """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono:wght@400;700&display=swap');
+    
+    .stApp { 
+        background: linear-gradient(135deg, #0c0c0c 0%, #1a1a2e 50%, #16213e 100%);
+        color: #FFFFFF; 
+        font-family: 'Inter', sans-serif; 
+    }
+    
+    #MainMenu, footer, header { visibility: hidden; }
+    h1, h2, h3, h4, h5, h6 { color: #FFFFFF !important; }
+    .stMetric { background: rgba(255,255,255,0.1); border-radius: 12px; padding: 1rem; }
+    .metric-card { background: rgba(0,0,0,0.5); border: 1px solid #333; border-radius: 12px; padding: 1.5rem; margin: 0.5rem 0; }
+    .alert-card { background: linear-gradient(45deg, #1e3c72, #2a5298); border: 1px solid #4a90e2; border-radius: 12px; padding: 1rem; margin: 0.5rem 0; cursor: grab; }
+    .trash-zone { background: #2d1b1b; border: 3px dashed #ff4444; border-radius: 12px; height: 100px; display: flex; align-items: center; justify-content: center; color: #ff6666; text-align: center; }
+    .rtl { direction: rtl; text-align: right; }
+    .login-container { display: flex; height: 100vh; }
+    .login-form { background: rgba(0,0,0,0.9); padding: 3rem; border-radius: 20px; border: 1px solid #333; max-width: 400px; }
+    </style>
+    """
+    st.markdown(css, unsafe_allow_html=True)
 
 # ==========================================
-# 3. STATE INITIALIZATION
+# DATA FUNCTIONS
 # ==========================================
-if 'page' not in st.session_state: st.session_state['page'] = 'auth'
-if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
-if 'user_email' not in st.session_state: st.session_state['user_email'] = None
+@st.cache_data(ttl=60)
+def get_market_data():
+    tickers = ['^GSPC', '^IXIC', 'BTC-USD', '^VIX']
+    data = {}
+    for ticker in tickers:
+        try:
+            stock = yf.Ticker(ticker)
+            hist = stock.history(period='2d')
+            if len(hist) > 1:
+                current = hist['Close'][-1]
+                prev = hist['Close'][-2]
+                change = ((current - prev) / prev) * 100
+                data[ticker] = (current, change)
+        except:
+            pass
+    return data
 
-# ==========================================
-# 4. BACKEND HELPERS (SIMPLIFIED)
-# ==========================================
 def login_user(email, password):
-    if email == "admin" and password == "123": return True
+    # Simple demo login
+    if email == "admin" and password == "123":
+        return True
     return False
 
-def simulate_google_login_success():
-    st.session_state['logged_in'] = True
-    st.session_state['user_email'] = "google_user@stockpulse.com"
-    st.rerun()
-
-@st.cache_data(ttl=30)
-def get_top_metrics():
-    # Fallback hardcoded data
-    return {"S&P 500": (5142.78, 0.63), "NASDAQ": (16173.61, 0.81), "BTC": (68490.1, -1.25), "VIX": (15.55, 3.1)}
-
 # ==========================================
-# 5. UI COMPONENTS
+# LOGIN PAGE
 # ==========================================
-
 def login_page():
-    # --- Paths to Assets ---
-    LOGO_LOGIN_URL = f"{BASE_URL}/logo_light_bg.png"
-    GOOGLE_ICON_URL = f"{BASE_URL}/google_icon.png"
-    APPLE_ICON_URL = f"{BASE_URL}/apple_icon.png"
-    LINKEDIN_ICON_URL = f"{BASE_URL}/linkedin_icon.png"
-
-    # --- Container for Split View ---
     st.markdown('<div class="login-container">', unsafe_allow_html=True)
     
-    # --- Image Side (Left Side - Fixed Logo and Welcome Text) ---
-    st.markdown(f"""
-        <div class="login-image-side">
-            <div style="z-index: 10;">
-                <img src="{LOGO_LOGIN_URL}" alt="StockPulse Logo" style="max-width: 250px; margin-bottom: 20px;">
-                <div class="welcome-text">Welcome Back to Your Real-Time Edge</div>
-            </div>
-        </div>
-    """, unsafe_allow_html=True)
+    col1, col2 = st.columns([1,1])
     
-    # --- Form Side (Right Side) ---
-    st.markdown('<div class="login-form-side">', unsafe_allow_html=True)
-    
-    # Tabs (Login / Sign Up) 
-    st.markdown("""<div class="login-tabs"><div class="active">LOG IN</div><div>SIGN UP</div></div>""", unsafe_allow_html=True)
-    
-    # --- Standard Login Form ---
-    with st.form("login_form", clear_on_submit=False):
-        st.markdown('<div style="color: white; direction: rtl; text-align: right; margin-top: 10px;">אימייל</div>', unsafe_allow_html=True)
-        email = st.text_input("אימייל", placeholder="הכנס אימייל", label_visibility="collapsed", key="email_input")
-        
-        st.markdown('<div style="color: white; direction: rtl; text-align: right; margin-top: 10px;">סיסמה</div>', unsafe_allow_html=True)
-        password = st.text_input("סיסמה", type="password", placeholder="הכנס סיסמה", label_visibility="collapsed", key="password_input")
-        
-        st.markdown('<div style="text-align: right; margin-top: 15px; margin-bottom: 25px;"><a href="#" style="color: #AAAAAA; font-size: 0.9em;">Forgot Password?</a></div>', unsafe_allow_html=True)
-
-        submitted = st.form_submit_button("LOG IN", use_container_width=True)
-        
-        if submitted:
-            if login_user(email, password):
-                st.session_state['logged_in'] = True
-                st.rerun()
-            else:
-                st.error("התחברות נכשלה. (רמז: admin/123)")
-                
-    st.write("---")
-    
-    # --- Social Login (Wide Google Button) ---
-    st.markdown('<div style="text-align: center; color: #AAAAAA; margin-bottom: 15px;">OR LOG IN WITH</div>', unsafe_allow_html=True)
-    
-    st.markdown('<div id="google_wide_btn_container">', unsafe_allow_html=True)
-    if st.button(f'<img src="{GOOGLE_ICON_URL}" id="google_icon_in_btn" alt="Google"> התחבר באמצעות גוגל', 
-                 key="google_wide_btn", 
-                 use_container_width=True,
-                 unsafe_allow_html=True): 
-        simulate_google_login_success()
-    st.markdown('</div>', unsafe_allow_html=True)
-    
-    # Don't have an account link
-    st.markdown('<div style="text-align: center; margin-top: 50px; color: #AAAAAA;">Don\'t have an account? <a href="#" style="color: #FF7F50;">Sign Up</a></div>', unsafe_allow_html=True)
-
-    st.markdown('</div>', unsafe_allow_html=True) # Close login-form-side
-    st.markdown('</div>', unsafe_allow_html=True) # Close login-container
-
-def main_dashboard():
-    # --- FIXED LOGO HEADER ---
-    st.markdown(f"""
-        <div class="fixed-logo-header">
-            <img src="{LOGO_DASHBOARD_URL}" alt="StockPulse Logo" class="logo-small-img">
-        </div>
-    """, unsafe_allow_html=True)
-    
-    # --- MAIN CONTENT AREA ---
-    st.markdown('<div class="main-content-padding">', unsafe_allow_html=True)
-    
-    # --- 1. Top Metrics Row (נתוני שוק חיים) ---
-    st.markdown('<h3 class="rtl">נתוני שוק חיים</h3>', unsafe_allow_html=True)
-    
-    metrics = get_top_metrics() 
-    
-    m1, m2, m3, m4 = st.columns(4)
-    
-    def show_metric(col, label, key_name):
-        val, chg = metrics.get(key_name, (0, 0))
-        col.metric(label=label, value=f"{val:,.2f}", delta=f"{chg:.2f}%")
-
-    show_metric(m1, "S&P 500", "S&P 500")
-    show_metric(m2, "NASDAQ 100", "NASDAQ")
-    show_metric(m3, "BITCOIN", "BTC")
-    show_metric(m4, "VIX Index", "VIX")
-
-    st.write("---")
-
-    # --- 2. Main Area (Split: Alerts List vs Create Alert) ---
-    col_list, col_create = st.columns([2, 1])
-
-    # --- צד ימין: צור התראה (Create Alert) ---
-    with col_create:
-        st.markdown('<div class="rtl" style="background: #111; padding: 20px; border-radius: 10px; border: 1px solid #444;">', unsafe_allow_html=True)
-        st.markdown('<h4 class="rtl">צור התראה</h4>', unsafe_allow_html=True)
-        
-        with st.form("create_alert_form"):
-            new_ticker = st.text_input("Ticker", value="NVDA", placeholder="סימול המניה")
-            target_price = st.number_input("שינוי מחיר (%)", value=5.0, placeholder="יעד ב-%")
-            min_vol = st.text_input("ווליום מינימלי", value="10M", placeholder="ווליום מינ' (למשל 10M)")
-            whatsapp_notify = st.checkbox("התראה בווצאפ", value=True)
-            alert_notes = st.text_area("הערות להתראה", height=70, placeholder="הוסף כאן הערות חשובות על התראה זו...")
-
-            submitted = st.form_submit_button("הוסף התראה", use_container_width=True)
-            if submitted: st.success(f"התראה ל-{new_ticker} נוצרה!") 
-        
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # --- צד שמאל: רשימת התראות (Alert List) ---
-    with col_list:
-        st.markdown('<h3 class="rtl">רשימת התראות</h3>', unsafe_allow_html=True)
-        
-        # --- פתקיות התראה לדוגמה (Omitted for brevity, but full HTML is assumed here) ---
+    with col1:
         st.markdown("""
-        <div style="height: 400px; overflow-y: auto;">
-            <p> (פתקיות ההתראה שהכנו קודם ימוקמו כאן) </p>
-            <p> פתקית לדוגמה: NVDA </p>
-            <p> פתקית לדוגמה: TSLA </p>
-            <p style='height: 200px;'> גלילה לדוגמה </p>
-        </div>
-        """, unsafe_allow_html=True) # Placeholder for the final sticky note UI
-
-        # --- פח אשפה בתחתית רשימת ההתראות ---
-        st.markdown("""
-        <div class="trash-can-area">
-            <i class="fa-solid fa-trash-can trash-icon"></i>
-            <p>גרור לכאן פתקיות התראה שהתממשו/בוטלו</p>
+        <div style="text-align: center; padding: 2rem;">
+            <h1>💹 StockPulse</h1>
+            <h3>המסוף המתקדם להתראות מניות</h3>
+            <p style="color: #aaa; font-size: 1.1rem;">קבל יתרון תחרותי בזמן אמת</p>
         </div>
         """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown('<div class="login-form rtl">', unsafe_allow_html=True)
+        st.markdown('<h3>כניסה</h3>')
         
-    if st.button("יציאה", key="logout_btn", use_container_width=True):
-        st.session_state['logged_in'] = False
+        with st.form("login_form"):
+            email = st.text_input("📧 אימייל", placeholder="admin@stockpulse.com")
+            password = st.text_input("🔒 סיסמה", type="password", placeholder="123")
+            col_btn1, col_btn2 = st.columns(2)
+            
+            with col_btn1:
+                if st.form_submit_button("🚀 התחבר", use_container_width=True):
+                    if login_user(email, password):
+                        st.session_state.logged_in = True
+                        st.session_state.user_email = email
+                        st.session_state.page = 'dashboard'
+                        st.rerun()
+                    else:
+                        st.error("❌ אימייל או סיסמה שגויים")
+            
+            with col_btn2:
+                if st.form_submit_button("🎯 דמו מהיר", use_container_width=True):
+                    st.session_state.logged_in = True
+                    st.session_state.user_email = "demo@stockpulse.com"
+                    st.session_state.page = 'dashboard'
+                    st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# ==========================================
+# DASHBOARD
+# ==========================================
+def dashboard():
+    # Header
+    st.markdown("### 💹 נתוני שוק חיים")
+    
+    # Market Metrics
+    data = get_market_data()
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        val, chg = data.get('^GSPC', (0, 0))
+        st.metric("S&P 500", f"{val:,.0f}", f"{chg:.2f}%")
+    
+    with col2:
+        val, chg = data.get('^IXIC', (0, 0))
+        st.metric("NASDAQ", f"{val:,.0f}", f"{chg:.2f}%")
+    
+    with col3:
+        val, chg = data.get('BTC-USD', (0, 0))
+        st.metric("Bitcoin", f"${val:,.0f}", f"{chg:.2f}%")
+    
+    with col4:
+        val, chg = data.get('^VIX', (0, 0))
+        st.metric("VIX", f"{val:.1f}", f"{chg:.2f}%")
+    
+    st.markdown("---")
+    
+    # Main Content
+    col_left, col_right = st.columns([2, 1])
+    
+    # Alerts List
+    with col_left:
+        st.markdown("### 📋 רשימת התראות פעילות")
+        
+        if st.session_state.alerts:
+            for i, alert in enumerate(st.session_state.alerts):
+                st.markdown(f"""
+                <div class="alert-card">
+                    <div><strong>{alert['ticker']}</strong> | {alert['target']}% | ווליום: {alert['volume']}</div>
+                    <div style="font-size: 0.9rem; color: #aaa;">{alert.get('notes', 'ללא הערות')}</div>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("אין התראות פעילות. צור התראה ראשונה!")
+        
+        # Trash Zone
+        st.markdown('<div class="trash-zone rtl">🗑️ גרור התראות שהתממשו לכאן</div>', unsafe_allow_html=True)
+    
+    # Create Alert
+    with col_right:
+        st.markdown("### ➕ צור התראה חדשה")
+        st.markdown('<div class="metric-card">', unsafe_allow_html=True)
+        
+        with st.form("create_alert"):
+            ticker = st.text_input("סימול", value="NVDA", help="למשל: AAPL, TSLA, BTC-USD")
+            target = st.number_input("יעד שינוי (%)", value=5.0, min_value=0.1, step=0.5)
+            volume = st.text_input("ווליום מינימלי", value="10M", placeholder="10M, 1B")
+            whatsapp = st.checkbox("🔔 התראת וואטסאפ")
+            notes = st.text_area("הערות", height=80, placeholder="הערות חשובות להתראה...")
+            
+            if st.form_submit_button("➕ הוסף התראה", use_container_width=True):
+                new_alert = {
+                    'id': len(st.session_state.alerts) + 1,
+                    'ticker': ticker,
+                    'target': target,
+                    'volume': volume,
+                    'whatsapp': whatsapp,
+                    'notes': notes,
+                    'created': datetime.now().strftime("%H:%M")
+                }
+                st.session_state.alerts.append(new_alert)
+                st.success(f"✅ התראה ל-{ticker} נוספה!")
+                st.rerun()
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Logout
+    st.markdown("---")
+    if st.button("🚪 יציאה", use_container_width=True):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
         st.rerun()
 
-    st.markdown('</div>', unsafe_allow_html=True) # Close main-content-padding
-
 # ==========================================
-# 6. MAIN ROUTING LOGIC
+# MAIN
 # ==========================================
+apply_css()
 
-apply_terminal_css()
-
-if not st.session_state['logged_in']:
+if not st.session_state.logged_in:
     login_page()
 else:
-    main_dashboard()
+    st.markdown(f"### שלום {st.session_state.user_email}")
+    dashboard()
