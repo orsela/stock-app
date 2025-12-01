@@ -183,7 +183,7 @@ def login_page():
                 st.rerun()
             else:
                 st.error("Login Failed")
-
+ 
 def main_dashboard():
     # פשוט מאוד כרגע - רק כדי לוודא שהמערכת עולה
     st.markdown('<div class="stock-header">Dashboard Active</div>', unsafe_allow_html=True)
