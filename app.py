@@ -48,11 +48,35 @@ def apply_dynamic_css(dark_mode: bool):
         h3 {{ font-size: 1.5rem !important; font-weight: 800 !important; color: #FF7F50 !important; }}
         h4 {{ font-size: 1.2rem !important; font-weight: 700 !important; }}
 
-        /* שיפור Metric Values (המספרים בדאשבורד) */
+      /* שיפור Metric Values (המספרים בדאשבורד) */
         .stMetricValue {{ 
             font-size: 2.2rem !important; 
             font-weight: 900 !important; 
             color: #FFFFFF !important;
+        }}
+
+        /* שיפור Metric Styling (כרטיסי המדדים החיים) */
+        .stMetric {{ 
+            background-color: #1a1a1a !important; /* רקע אפור כהה לכרטיס */
+            padding: 15px !important; 
+            border-radius: 8px !important;
+            border: 1px solid #333333;
+        }}
+        
+        /* כותרת המדד (S&P 500) - גדולה ובולטת */
+        .stMetricLabel {{
+            font-size: 1.1rem !important;
+            font-weight: 800 !important; /* BOLD חזק */
+            color: #FF7F50 !important; /* שימוש בצבע המותג הכתום לכותרת */
+            margin-bottom: 5px;
+        }}
+
+        /* ערך המדד (המספר עצמו) - לבן וגדול */
+        .stMetricValue {{ 
+            font-size: 2.5rem !important; /* גודל גדול יותר */
+            font-weight: 900 !important; 
+            color: #FFFFFF !important; /* לבן בולט */
+            line-height: 1.1;
         }}
 
         /* General Styling */
@@ -446,4 +470,5 @@ if not st.session_state['logged_in']:
     login_page()
 else:
     main_dashboard()
+
 
