@@ -272,19 +272,33 @@ def login_user(email, password):
     # BACKDOOR – כניסה ללא DB
     if email == "admin" and password == "123":
         return True
+
     if not email or not password:
         return False
+
     sheet = get_worksheet("USERS")
     if not sheet:
+        # אם אין חיבור ל־DB, רק ה־backdoor יעבוד
         return False
+
     try:
         data = sheet.get_all_records()
         if not data:
             return False
+
         df = pd.DataFrame(data)
-        if 'email' not in df.columns:
+        if 'email' not in df.columns or 'password' not in df.columns:
             return False
+
         user = df[df['email'] == email]
         if user.empty:
             return False
-        if check_hashes(password, user.iloc
+
+        stored_hash = user.iloc[0]['password']
+        if check_hashes(password, stored_hash):
+            return True
+        return False
+    except:
+        return False
+
+
