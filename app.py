@@ -20,7 +20,7 @@ st.set_page_config(
 )
 
 # נתיבים קבועים (ודא שהם תואמים לנתיב ב-GitHub שלך!)
-GITHUB_USER = "orsela" 
+GITHUB_USER = "orsela"
 REPO_NAME = "stock-app"
 BASE_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/main/assets"
 LOGO_URL = f"{BASE_URL}/logo_light_bg.png"
@@ -35,11 +35,27 @@ def apply_dynamic_css(dark_mode: bool):
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;900&family=JetBrains+Mono:wght@400;700&family=Permanent+Marker&display=swap');
         
+        /* רקע ראשי וצבע טקסט כללי */
         .stApp {{ background-color: #000000 !important; color: #FFFFFF !important; font-family: 'Inter', sans-serif; }}
         #MainMenu, footer, header, .stDeployButton {{ visibility: hidden; }}
 
+        /* --- שיפור קריאות טקסט וכותרות --- */
+        /* צבע טקסט ראשי לבן ומודגש יותר לכל הפריטים */
+        h1, h2, h3, h4, h5, h6, p, label, .stMetricLabel, .stMarkdown, .css-1dp5vir {{ color: #FFFFFF !important; opacity: 1 !important; font-weight: 600; }} 
+        
+        /* הדגשת כותרות באופן כללי */
+        h2 {{ font-size: 2.0rem !important; font-weight: 900 !important; color: #FF7F50 !important; }}
+        h3 {{ font-size: 1.5rem !important; font-weight: 800 !important; color: #FF7F50 !important; }}
+        h4 {{ font-size: 1.2rem !important; font-weight: 700 !important; }}
+
+        /* שיפור Metric Values (המספרים בדאשבורד) */
+        .stMetricValue {{ 
+            font-size: 2.2rem !important; 
+            font-weight: 900 !important; 
+            color: #FFFFFF !important;
+        }}
+
         /* General Styling */
-        h1, h2, h3, h4, h5, h6, p, label, .stMetricLabel {{ color: #FFFFFF !important; opacity: 1 !important; }}
         .rtl {{ direction: rtl; text-align: right; font-family: 'Inter', sans-serif; }}
         
         /* Input & Button Styling */
@@ -100,17 +116,19 @@ def apply_dynamic_css(dark_mode: bool):
         .dashboard-logo-img-container {{ text-align: center; margin-bottom: 30px; padding-top: 20px; }}
         .dashboard-logo-img {{ max-width: 300px; height: auto; display: block; margin-left: auto; margin-right: auto; }}
         
-        /* Sticky Note Styling (Simplified for stability) */
+        /* Sticky Note Styling */
         .sticky-note {{
             background-color: #FFFFAA; border: 1px solid #CCCC00; padding: 15px; border-radius: 5px;
             margin-bottom: 20px; box-shadow: 3px 3px 5px rgba(0,0,0,0.3); position: relative;
-            transform: rotate(1deg); font-family: 'Permanent Marker', cursive; color: #333; text-align: right; direction: rtl;
+            transform: rotate(1deg); font-family: 'Permanent Marker', cursive; color: #000080; text-align: right; direction: rtl;
         }}
         .sticky-note-header {{
-            font-size: 1.5em; font-weight: bold; margin-bottom: 5px; color: #333; border-bottom: 1px dashed #CCC;
+            font-size: 1.5em; font-weight: bold; margin-bottom: 5px; color: #000080; border-bottom: 1px dashed #CCC;
             padding-bottom: 5px; display: flex; justify-content: space-between; align-items: center;
         }}
-        .sticky-note-body {{ font-size: 1em; margin-bottom: 10px; }}
+        .sticky-note-body p, .sticky-note-footer {{
+            color: #000080 !important;
+        }}
         .sticky-note-footer {{ display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px dashed #CCC; }}
         .trash-can-area {{ background-color: #222; border: 2px dashed #444; border-radius: 10px; padding: 30px; margin-top: 50px; text-align: center; color: #aaa; font-size: 1.2em; }}
         </style>
@@ -221,7 +239,7 @@ def login_page():
     st.markdown('</div>', unsafe_allow_html=True) # Close login-container
 
 # ==========================================
-# 5. MAIN DASHBOARD
+# 5. MAIN DASHBOARD (מעודכן עם טאבים וקריאות משופרת)
 # ==========================================
 def main_dashboard():
     # --- Paths to Assets ---
@@ -230,57 +248,6 @@ def main_dashboard():
     BASE_URL = f"https://raw.githubusercontent.com/{GITHUB_USER}/{REPO_NAME}/main/assets"
     LOGO_URL = f"{BASE_URL}/logo_light_bg.png" 
     
-    # --- CSS: עדכון צבע הפתקית לכחול כהה (#000080) ---
-    st.markdown("""
-        <style>
-        /* Sticky Note Styling */
-        .sticky-note {
-            background-color: #FFFFAA; 
-            border: 1px solid #CCCC00;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 20px;
-            box-shadow: 3px 3px 5px rgba(0,0,0,0.3);
-            position: relative;
-            transform: rotate(1deg); 
-            max-width: 300px; 
-            display: flex;
-            flex-direction: column;
-            font-family: 'Permanent Marker', cursive;
-            color: #000080; /* שינוי: טקסט ראשי לכחול כהה */
-            text-align: right; /* יישור הטקסט הראשי לעברית */
-            direction: rtl;
-        }
-        .sticky-note-header {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-bottom: 5px;
-            color: #000080; /* שינוי: כחול כהה */
-            border-bottom: 1px dashed #CCC;
-            padding-bottom: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .sticky-note-body p {
-            color: #000080 !important; /* ודא שהטקסט בתוך ה-p הוא כחול כהה */
-        }
-        .sticky-note-footer {
-            font-size: 0.8em;
-            color: #000080; /* שינוי: כחול כהה */
-            margin-top: auto;
-            padding-top: 10px;
-            border-top: 1px dashed #CCC;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .trash-can-area {
-            background-color: #222; border: 2px dashed #444; border-radius: 10px; padding: 30px; margin-top: 50px; text-align: center; color: #aaa; font-size: 1.2em;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-    
     # --- 0. Logo at the Top ---
     st.markdown(f"""
         <div class="dashboard-logo-img-container">
@@ -288,15 +255,20 @@ def main_dashboard():
         </div>
     """, unsafe_allow_html=True)
 
-    # --- 1. Top Metrics Row ---
-    st.markdown('<h3 class="rtl">נתוני שוק חיים</h3>', unsafe_allow_html=True)
+    # --- 1. Top Metrics Row (כותרת נתוני שוק חיה) ---
+    st.markdown('<h2 class="rtl">📊 נתוני שוק חיים</h2>', unsafe_allow_html=True) 
     
     metrics = get_top_metrics() 
     m1, m2, m3, m4 = st.columns(4)
     
     def show_metric(col, label, key_name):
         val, chg = metrics.get(key_name, (0, 0))
-        col.metric(label=label, value=f"{val:,.2f}", delta=f"{chg:.2f}%")
+        # השימוש ב-col.metric ינצל את שינויי ה-CSS שבוצעו
+        col.metric(
+            label=label, 
+            value=f"{val:,.2f}", 
+            delta=f"{chg:.2f}%"
+        )
 
     show_metric(m1, "S&P 500", "S&P 500")
     show_metric(m2, "NASDAQ 100", "NASDAQ")
@@ -305,62 +277,126 @@ def main_dashboard():
 
     st.write("---")
 
-    # --- 2. Main Area (Split: Alerts List vs Create Alert) ---
-    col_list, col_create = st.columns([2, 1])
+    # --- 2. Main Area (שימוש בכרטיסיות) ---
+    
+    # יצירת כרטיסיות
+    tab1, tab2, tab3 = st.tabs(["🔥 התראות שלי", "📈 ניתוח מניה", "🗒️ יומן מסחר"])
 
-    # --- צד ימין: צור התראה (Create Alert) ---
-    with col_create:
-        st.markdown('<div class="rtl" style="background: #111; padding: 20px; border-radius: 10px; border: 1px solid #444;">', unsafe_allow_html=True)
-        st.markdown('<h4 class="rtl">צור התראה</h4>', unsafe_allow_html=True)
-        
-        with st.form("create_alert_form"):
-            new_ticker = st.text_input("Ticker", value="NVDA", placeholder="סימול המניה")
-            target_price = st.number_input("שינוי מחיר (%)", value=5.0, placeholder="יעד ב-%")
-            min_vol = st.text_input("ווליום מינימלי", value="10M", placeholder="ווליום מינ' (למשל 10M)")
-            whatsapp_notify = st.checkbox("התראה בווצאפ", value=True)
-            alert_notes = st.text_area("הערות להתראה", height=70, placeholder="הוסף כאן הערות חשובות על התראה זו...")
+    # =========================================================================
+    # כרטיסייה 1: התראות שלי וצור התראה
+    # =========================================================================
+    with tab1:
+        col_list, col_create = st.columns([2, 1])
 
-            submitted = st.form_submit_button("הוסף התראה", use_container_width=True)
-            if submitted: st.success(f"התראה ל-{new_ticker} נוצרה!") 
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+        # --- צד ימין: צור התראה (Create Alert) ---
+        with col_create:
+            st.markdown('<div class="rtl" style="background: #111; padding: 20px; border-radius: 10px; border: 1px solid #444;">', unsafe_allow_html=True)
+            st.markdown('<h3 class="rtl" style="color: #FF7F50 !important; font-weight: 800;">➕ צור התראה חדשה</h3>', unsafe_allow_html=True)
+            
+            with st.form("create_alert_form_tab1"):
+                # הערות: השדות משתמשים ב-CSS הכללי לשיפור קריאות
+                new_ticker = st.text_input("Ticker", value="NVDA", placeholder="סימול המניה")
+                target_price = st.number_input("שינוי מחיר (%)", value=5.0, placeholder="יעד ב-%")
+                min_vol = st.text_input("ווליום מינימלי", value="10M", placeholder="ווליום מינ' (למשל 10M)")
+                whatsapp_notify = st.checkbox("התראה בווצאפ", value=True)
+                alert_notes = st.text_area("הערות להתראה", height=70, placeholder="הוסף כאן הערות חשובות על התראה זו...")
 
-    # --- צד שמאל: רשימת התראות (Alert List) ---
-    with col_list:
-        st.markdown('<h3 class="rtl">רשימת התראות</h3>', unsafe_allow_html=True)
-        
-        # --- פתקית התראה לדוגמה 1 (NVDA) ---
-        st.markdown("""
-        <div class="sticky-note">
-            <div class="sticky-note-header">
-                NVDA 
+                submitted = st.form_submit_button("הוסף התראה", use_container_width=True)
+                if submitted: 
+                    st.success(f"התראה ל-{new_ticker} נוצרה!") 
+            
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        # --- צד שמאל: רשימת התראות (Alert List) ---
+        with col_list:
+            st.markdown('<h3 class="rtl">🔔 התראות פעילות</h3>', unsafe_allow_html=True)
+            
+            # --- פתקית התראה לדוגמה 1 (NVDA) ---
+            st.markdown("""
+            <div class="sticky-note">
+                <div class="sticky-note-header">
+                    NVDA 
+                </div>
+                <div class="sticky-note-body">
+                    <p><strong>מחיר יעד:</strong> +5.00% ($180.00)</p>
+                    <p><strong>ווליום מינ':</strong> 10,000,000</p>
+                    <p><strong>מרחק MA150:</strong> +5.00%</p>
+                    <p style="font-size:0.9em; margin-top: 10px; border-top: 1px dashed #CCC; padding-top: 5px;">
+                        <em>"לבדוק את הדוחות הכספיים לפני כניסה לפוזיציה."</em>
+                    </p>
+                </div>
+                <div class="sticky-note-footer">
+                    <span>פעיל</span>
+                    <button style="background-color: #4CAF50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">📊 גרף NVDA</button>
+                </div>
             </div>
-            <div class="sticky-note-body">
-                <p><strong>מחיר יעד:</strong> +5.00% ($180.00)</p>
-                <p><strong>ווליום מינ':</strong> 10,000,000</p>
-                <p><strong>מרחק MA150:</strong> +5.00%</p>
-                <p style="font-size:0.9em; margin-top: 10px; border-top: 1px dashed #CCC; padding-top: 5px;">
-                    <em>"לבדוק את הדוחות הכספיים לפני כניסה לפוזיציה."</em>
-                </p>
-            </div>
-            <div class="sticky-note-footer">
-                <span>פעיל</span>
-                <button style="background-color: #4CAF50; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">📊 גרף NVDA</button>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
-        # --- פח אשפה בתחתית רשימת ההתראות ---
-        st.markdown("""
-        <div class="trash-can-area">
-            <i class="fa-solid fa-trash-can trash-icon"></i>
-            <p>גרור לכאן פתקיות התראה שהתממשו/בוטלו</p>
-        </div>
-        """, unsafe_allow_html=True)
+            # --- פח אשפה בתחתית רשימת ההתראות ---
+            st.markdown("""
+            <div class="trash-can-area">
+                <i class="fa-solid fa-trash-can trash-icon"></i>
+                <p>גרור לכאן פתקיות התראה שהתממשו/בוטלו</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # =========================================================================
+    # כרטיסייה 2: ניתוח מניה
+    # =========================================================================
+    with tab2:
+        st.markdown('<h3 class="rtl">🔍 ניתוח נתונים וגרפים</h3>', unsafe_allow_html=True)
+        # דוגמה לניתוח מניה
+        stock_ticker = st.text_input("הזן סימול מניה (לדוגמה: AAPL, TSLA)", "AAPL", key="stock_analysis_ticker")
+        st.info(f"מציג נתונים היסטוריים וגרף עבור: **{stock_ticker}**")
         
+        # הדמיית גרף
+        if stock_ticker:
+            try:
+                # הורדת נתונים באמצעות yfinance
+                data = yf.download(stock_ticker, period="6mo", interval="1d")
+                if not data.empty:
+                    fig = go.Figure(data=[go.Candlestick(
+                        x=data.index,
+                        open=data['Open'],
+                        high=data['High'],
+                        low=data['Low'],
+                        close=data['Close'],
+                        increasing_line_color='green', # נרות עולים
+                        decreasing_line_color='red'   # נרות יורדים
+                        )])
+
+                    fig.update_layout(
+                        xaxis_rangeslider_visible=False,
+                        title=f'{stock_ticker} - גרף נרות (6 חודשים)',
+                        xaxis_title="תאריך",
+                        yaxis_title="מחיר (USD)",
+                        plot_bgcolor="#000000", # רקע גרף שחור
+                        paper_bgcolor="#000000", # רקע נייר שחור
+                        font=dict(color="#FFFFFF"), # צבע גופן לבן
+                        title_font_color="#FF7F50"
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning(f"לא נמצאו נתונים עבור הסימול {stock_ticker}")
+            except Exception as e:
+                st.error(f"שגיאה בהורדת נתונים: {e}")
+
+
+    # =========================================================================
+    # כרטיסייה 3: יומן מסחר (placeholder)
+    # =========================================================================
+    with tab3:
+        st.markdown('<h3 class="rtl">📖 רישום עסקאות יומי</h3>', unsafe_allow_html=True)
+        st.info("כאן תוכל לנהל את יומן המסחר שלך ולעקוב אחר ביצועי העסקאות.")
+        st.text_area("הערת מסחר יומית", height=150, placeholder="רשום כאן את הניתוח והמסקנות שלך להיום...")
+        st.button("שמור רשומה", key="save_journal", type="primary")
+
+    # --- יציאה ---
+    st.write("---")
     if st.button("יציאה", key="logout_btn", use_container_width=True):
         st.session_state['logged_in'] = False
         st.rerun()
+
 # ==========================================
 # 6. MAIN ROUTING LOGIC
 # ==========================================
@@ -371,4 +407,3 @@ if not st.session_state['logged_in']:
     login_page()
 else:
     main_dashboard()
-
