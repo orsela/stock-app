@@ -60,11 +60,3 @@ def apply_dynamic_css(dark_mode: bool):
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
         """
         st.markdown(css, unsafe_allow_html=True)
-
-### ❓ מה קרה בפועל?
-
-הסיכוי הגבוה ביותר הוא שגיאת **Python Traceback** חמורה. כדי שנוכל למצוא את השגיאה המדויקת ולתקן את ה-CSS בצורה נכונה (ולהחזיר את הרקע והלוגו הקבוע):
-
-**אנא בדוק בטרמינל או ב-Streamlit Cloud Dashboard ומסור לי את שורת הקוד הראשונה האדומה המופיעה בלוג השגיאות.**
-
-תודה על הסבלנות, אני מחכה לראות אם האפליקציה עולה עכשיו.
