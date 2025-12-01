@@ -185,79 +185,113 @@ def login_page():
                 st.error("Login Failed")
  
 def main_dashboard():
-    # --- 1. Top Ticker Animation ---
-    # רשימת מניות לדוגמה שרצה למעלה
+    # --- CSS להתאמה לעברית ועיצוב כהה ---
     st.markdown("""
-        <div class="ticker-wrap">
-        <div class="ticker-move">
-            <div class="ticker-item">AAPL 185.92 (+1.2%)</div>
-            <div class="ticker-item">TSLA 240.50 (-0.8%)</div>
-            <div class="ticker-item">NVDA 490.10 (+2.1%)</div>
-            <div class="ticker-item">GOOGL 138.40 (+0.5%)</div>
-            <div class="ticker-item">AMZN 152.12 (-0.3%)</div>
-            <div class="ticker-item">MSFT 380.20 (+1.1%)</div>
-            <div class="ticker-item">BTC-USD 42,500 (+3.5%)</div>
-        </div>
-        </div>
+        <style>
+        .rtl { direction: rtl; text-align: right; font-family: 'Inter', sans-serif; }
+        .metric-card { background-color: #1e1e1e; padding: 15px; border-radius: 10px; border: 1px solid #333; text-align: center; }
+        .stMetric { text-align: center !important; }
+        /* התאמת כותרות לעברית */
+        h3 { text-align: right; direction: rtl; color: #fff; }
+        </style>
     """, unsafe_allow_html=True)
 
-    # --- 2. Main Layout ---
-    st.markdown('<div class="logo-title">StockPulse Terminal</div>', unsafe_allow_html=True)
+    # --- 1. Top Metrics Row (נתוני שוק חיים) ---
+    st.markdown('<h3 class="rtl">נתוני שוק חיים</h3>', unsafe_allow_html=True)
     
-    # שורת חיפוש
-    col_search, col_btn = st.columns([4, 1])
-    with col_search:
-        symbol = st.text_input("SYMBOL SEARCH (e.g. TSLA, NVDA)", value="SPY").upper()
+    # שליפת נתונים אמיתיים (או 0 אם אין חיבור)
+    metrics = get_top_metrics() 
     
-    # --- 3. Data Fetching & Visualization ---
-    if symbol:
-        data = get_stock_analysis(symbol)
+    # יצירת 4 עמודות למדדים
+    m1, m2, m3, m4 = st.columns(4)
+    
+    # פונקציית עזר להצגת מדד יפה
+    def show_metric(col, label, key_name):
+        val, chg = metrics.get(key_name, (0, 0))
+        color = "normal"
+        if chg > 0: color = "normal" # ירוק בברירת מחדל של סטרימליט
+        if chg < 0: color = "inverse" # אדום
+        col.metric(label=label, value=f"{val:,.2f}", delta=f"{chg:.2f}%")
+
+    show_metric(m1, "S&P 500", "S&P 500")
+    show_metric(m2, "NASDAQ 100", "NASDAQ")
+    show_metric(m3, "BITCOIN", "BTC")
+    show_metric(m4, "VIX Index", "VIX")
+
+    st.write("---")
+
+    # --- 2. Main Area (Split: Alerts List vs Create Alert) ---
+    # יחס של 1:2 (רשימה רחבה משמאל, יצירה צרה מימין)
+    col_list, col_create = st.columns([2, 1])
+
+    # --- צד ימין: צור התראה (Create Alert) ---
+    with col_create:
+        st.markdown('<div class="rtl" style="background: #111; padding: 20px; border-radius: 10px; border: 1px solid #444;">', unsafe_allow_html=True)
+        st.markdown('<h4 class="rtl">צור התראה</h4>', unsafe_allow_html=True)
         
-        if data:
-            # תצוגת מחיר ראשית
-            st.markdown(f"""
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="color: #FF7F50; margin:0;">{symbol}</h2>
-                <div class="stock-price-lg">${data['price']:.2f}</div>
+        with st.form("create_alert_form"):
+            new_ticker = st.text_input("Ticker", value="NVDA")
+            target_price = st.number_input("שינוי מחיר (%)", value=5.0)
+            min_vol = st.text_input("ווליום מינימלי", value="10M")
+            whatsapp_notify = st.checkbox("התראה בווצאפ", value=True)
+            
+            submitted = st.form_submit_button("הוסף התראה", use_container_width=True)
+            if submitted:
+                # כאן נחבר אחר כך את הוספת ההתראה לדאטהבייס
+                st.success(f"התראה ל-{new_ticker} נוצרה!")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- צד שמאל: רשימת התראות (Alert List) ---
+    with col_list:
+        st.markdown('<h3 class="rtl">רשימת התראות</h3>', unsafe_allow_html=True)
+        
+        # --- דוגמה לכרטיס התראה (Hardcoded בינתיים, כמו בתמונה) ---
+        # בעתיד נחליף את זה בלולאה שרצה על הנתונים מה-DB
+        
+        st.markdown("""
+        <div style="background-color: #262730; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-right: 5px solid #4CAF50;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin:0; color: white;">NVDA</h2>
+                    <span style="color: #4CAF50; font-weight: bold;">+5.00%</span> | $180.00
+                </div>
+                <div style="text-align: right; color: #aaa; font-size: 0.8em;">
+                    ווליום: 10,000,000<br>
+                    מרחק ממוצע 150: +5.00%
+                </div>
             </div>
-            """, unsafe_allow_html=True)
-            
-            # גרף נרות (Candlestick)
-            fig = go.Figure(data=[go.Candlestick(
-                x=data['hist'].index,
-                open=data['hist']['Open'],
-                high=data['hist']['High'],
-                low=data['hist']['Low'],
-                close=data['hist']['Close'],
-                name=symbol
-            )])
-            
-            fig.update_layout(
-                template="plotly_dark",
-                plot_bgcolor='rgba(0,0,0,0)',
-                paper_bgcolor='rgba(0,0,0,0)',
-                height=500,
-                margin=dict(l=0, r=0, t=20, b=0),
-                xaxis_rangeslider_visible=False
-            )
-            
-            st.plotly_chart(fig, use_container_width=True)
-            
-            # --- 4. Trading Controls (Buy/Sell Simulation) ---
-            st.write("---")
-            c1, c2, c3 = st.columns(3)
-            with c1:
-                st.info(f"MA150: ${data['ma150']:.2f}")
-            with c2:
-                # כפתור שמירת התראה (כרגע רק ויזואלי)
-                if st.button(f"SET ALERT FOR {symbol}"):
-                    st.success(f"Alert set for {symbol} (Simulation)")
-            with c3:
-                st.metric("Volume", f"{data['hist']['Volume'].iloc[-1]:,}")
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # כפתורים מתחת לכרטיס (בתוך עמודות פנימיות ליישור)
+        b1, b2 = st.columns([1, 4])
+        with b1:
+            st.toggle("פעיל", value=True, key="toggle_nvda_1")
+        with b2:
+            st.button("📊 גרף NVDA", key="btn_nvda_1", use_container_width=True)
 
-        else:
-            st.error(f"Could not find data for {symbol}. Check spelling.")
-
+        # --- כרטיס דוגמה שני ---
+        st.markdown("""
+        <div style="background-color: #262730; padding: 15px; border-radius: 10px; margin-bottom: 10px; border-right: 5px solid #4CAF50;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 style="margin:0; color: white;">TSLA</h2>
+                    <span style="color: #FF5555; font-weight: bold;">-2.30%</span> | $240.00
+                </div>
+                <div style="text-align: right; color: #aaa; font-size: 0.8em;">
+                    ווליום: 5,200,000<br>
+                    מרחק ממוצע 150: -1.20%
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        b3, b4 = st.columns([1, 4])
+        with b3:
+            st.toggle("פעיל", value=True, key="toggle_tsla_1")
+        with b4:
+            st.button("📊 גרף TSLA", key="btn_tsla_1", use_container_width=True)
 # --- Main Execution Block ---
 apply_terminal_css()
 
@@ -265,4 +299,5 @@ if not st.session_state['logged_in']:
     login_page()
 else:
     main_dashboard()
+
 
